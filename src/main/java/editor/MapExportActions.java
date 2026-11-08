@@ -280,7 +280,8 @@ final class MapExportActions {
             String imdFolderPath = configDialog.getImdFolderPath();
 
             final ImdOutputInfoDialog outputDialog = new ImdOutputInfoDialog(frame);
-            outputDialog.init(handler, fileNames, objFolderPath, imdFolderPath);
+            outputDialog.init(handler, fileNames, objFolderPath, imdFolderPath,
+                    configDialog.mergeTriangles());
             outputDialog.setLocationRelativeTo(frame);
             outputDialog.setVisible(true);
 

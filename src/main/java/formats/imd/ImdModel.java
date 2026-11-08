@@ -64,6 +64,18 @@ public class ImdModel extends ImdNode {
             ParserConfigurationException, ParserConfigurationException,
             IOException, TransformerException, TextureNotFoundException,
             NormalsNotFoundException {
+        this(objPath, savePath, tsetMaterials, true);
+    }
+
+    /**
+     * @param mergeTriangles join pairs of triangles that form a flat quad into
+     *                       that quad (see QuadMerger)
+     */
+    public ImdModel(String objPath, String savePath,
+                    ArrayList<TilesetMaterial> tsetMaterials, boolean mergeTriangles) throws
+            ParserConfigurationException, ParserConfigurationException,
+            IOException, TransformerException, TextureNotFoundException,
+            NormalsNotFoundException {
         super("imd");
 
         attributes = new ArrayList<ImdAttribute>() {
@@ -131,6 +143,17 @@ public class ImdModel extends ImdNode {
             polygons.get(i).scale(scaleFactor);
         }
         //System.out.println("Scale factor: " + scaleFactor);
+
+        //Join triangle pairs into quads, before the texture coordinates are moved per polygon
+        if (mergeTriangles) {
+            for (int i = 0; i < polygons.size(); i++) {
+                TilesetMaterial material = materials.get(textureIDs.get(i));
+                boolean lit = material.getLight0() || material.getLight1()
+                        || material.getLight2() || material.getLight3();
+                QuadMerger.merge(polygons.get(i), lit,
+                        material.getTextureImg().getWidth(), material.getTextureImg().getHeight());
+            }
+        }
 
         //Fix Texture Coordinates out of range
         for (int i = 0; i < polygons.size(); i++) {
