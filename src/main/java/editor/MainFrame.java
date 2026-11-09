@@ -129,6 +129,46 @@ public class MainFrame extends JFrame {
         });
     }
 
+    /**
+     * Thin drag strip next to the tile list. Dragging changes how many tiles fit in a row; the list
+     * snaps to whole tile columns. direction -1: strip on the left (drag left to widen), 1: on the right.
+     */
+    private class TileListResizeHandle extends JPanel {
+        private static final int MIN_COLUMNS = 4;
+        private static final int MAX_COLUMNS = 24;
+        private final int direction;
+        private int pressScreenX;
+        private int pressColumns;
+
+        TileListResizeHandle(int direction) {
+            this.direction = direction;
+            setPreferredSize(new Dimension(6, 0));
+            setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR));
+            setToolTipText("Drag to resize the tile list");
+            MouseAdapter drag = new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    pressScreenX = e.getXOnScreen();
+                    pressColumns = tileSelector.getColumns();
+                }
+
+                @Override
+                public void mouseDragged(MouseEvent e) {
+                    int delta = (e.getXOnScreen() - pressScreenX) * TileListResizeHandle.this.direction;
+                    int columns = pressColumns + Math.round(delta / 16f);
+                    columns = Math.max(MIN_COLUMNS, Math.min(MAX_COLUMNS, columns));
+                    if (columns != tileSelector.getColumns()) {
+                        tileSelector.setColumns(columns);
+                        jpMainWindow.revalidate();
+                        jpMainWindow.repaint();
+                    }
+                }
+            };
+            addMouseListener(drag);
+            addMouseMotionListener(drag);
+        }
+    }
+
     public MainFrame() {
         initComponents();
         initCustomComponents();
@@ -2641,6 +2681,8 @@ public class MainFrame extends JFrame {
                                 "[grow,fill]" +
                                 "[fill]" +
                                 "[fill]" +
+                                "[fill]" +
+                                "[fill]" +
                                 "[fill]",
                         // rows
                         "[grow,fill]"));
@@ -2793,7 +2835,9 @@ public class MainFrame extends JFrame {
                                             .addGap(0, 0, 0))
                     );
                 }
-                jpMainWindow.add(jpTileList, "cell 4 0");
+                jpMainWindow.add(new TileListResizeHandle(-1), "cell 4 0");
+                jpMainWindow.add(jpTileList, "cell 5 0");
+                jpMainWindow.add(new TileListResizeHandle(1), "cell 6 0");
 
                 //======== jpSmartDrawing ========
                 {
@@ -2834,7 +2878,7 @@ public class MainFrame extends JFrame {
                                     .addComponent(jscSmartDrawing, GroupLayout.DEFAULT_SIZE, 0, Short.MAX_VALUE)
                     );
                 }
-                jpMainWindow.add(jpSmartDrawing, "cell 5 0");
+                jpMainWindow.add(jpSmartDrawing, "cell 7 0");
 
                 //======== jpButtons ========
                 {

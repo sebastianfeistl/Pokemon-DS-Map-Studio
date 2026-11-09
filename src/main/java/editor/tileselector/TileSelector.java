@@ -43,7 +43,8 @@ public class TileSelector extends JPanel {
     private MapEditorHandler handler;
     private TilesetEditorDialog dialog;
     private final int tilePixelSize = 16;
-    private final int maxCols = 8;
+    public static final int DEFAULT_COLUMNS = 8;
+    private int maxCols = DEFAULT_COLUMNS;
     private final int headerHeight = 16;
     private static final int PINNED_DIVIDER_HEIGHT = 5;
     private static final int MIN_PINNED_BODY_HEIGHT = 32;
@@ -567,6 +568,19 @@ public class TileSelector extends JPanel {
         this.multiSelectionEnabled = false;
 
         updateLayout();
+    }
+
+    public int getColumns() {
+        return maxCols;
+    }
+
+    /** Tiles per row of the list. The main window changes this when the tile list panel is resized. */
+    public void setColumns(int columns) {
+        columns = Math.max(1, columns);
+        if (columns != maxCols) {
+            maxCols = columns;
+            updateLayout();
+        }
     }
 
     public void updateLayout() {
