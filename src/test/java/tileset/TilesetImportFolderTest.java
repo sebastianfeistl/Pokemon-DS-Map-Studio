@@ -80,4 +80,23 @@ class TilesetImportFolderTest {
         assertEquals("", project.get(0).getPaletteFolder());
         assertNull(project.getPaletteFolder("Anything"));
     }
+
+    @Test
+    void collisionDefaultsTravelWithImportedTiles() throws Exception {
+        Tileset library = new Tileset();
+        library.importTiles(source("a", 1));
+        Tile t = library.get(0);
+        t.getOrCreateCollisionDefaultGrid(0)[0][0] = 0x80; // layer 0 = Type
+        t.getOrCreateCollisionDefaultGrid(1)[0][0] = 0x01; // layer 1 = Collision
+        String path = dir.resolve("library.pdsts").toString();
+        TilesetIO.writeTilesetToFile(path, library);
+
+        Tileset project = new Tileset();
+        project.importTiles(TilesetIO.readTilesetFromFile(path).getTiles(), "library");
+
+        Tile imported = project.get(0);
+        assertEquals(0x80, imported.getCollisionDefaults().get(0)[0][0]);
+        assertEquals(0x01, imported.getCollisionDefaults().get(1)[0][0]);
+        assertEquals("library", imported.getPaletteFolder());
+    }
 }
