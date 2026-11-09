@@ -503,41 +503,39 @@ public class Tile {
                         numVertex++;
                     }
                 }
-                if (numVertex > 3) {
-                    numVertex = 4;
-                } else {
-                    numVertex = 3;
-                }
-                Face f = new Face(numVertex > 3);
+                numVertex = Math.max(numVertex, 3);
+                // Vertex, texture, normal and color index of each vertex
+                int[][] vertices = new int[numVertex][4];
                 for (int i = 0; i < numVertex; i++) {
                     String[] sArray = splitLine[i].split("/");
-                    f.vInd[i] = Integer.valueOf(sArray[0]);
-                    f.tInd[i] = Integer.valueOf(sArray[1]);
+                    vertices[i][0] = Integer.valueOf(sArray[0]);
+                    vertices[i][1] = Integer.valueOf(sArray[1]);
                     if (sArray.length > 2) {
-                        f.nInd[i] = Integer.valueOf(sArray[2]);
+                        vertices[i][2] = Integer.valueOf(sArray[2]);
                     } else {
                         throw new NormalsNotFoundException("The OBJ file \""
                                 + objName + "\" does not contain calculated normals.");
                     }
                     if (sArray.length > 3) {
-                        f.cInd[i] = Integer.valueOf(sArray[3]);
+                        vertices[i][3] = Integer.valueOf(sArray[3]);
                     } else {
                         if (!firstColorAdded) {
                             firstColorIndex = colorsObj.size() / 3 + 1;
-                            f.cInd[i] = firstColorIndex;
                             colorsObj.add(1.0f);
                             colorsObj.add(1.0f);
                             colorsObj.add(1.0f);
                             firstColorAdded = true;
-                        } else {
-                            f.cInd[i] = firstColorIndex;
                         }
+                        vertices[i][3] = firstColorIndex;
                     }
                 }
-                if (f.isQuad) {
-                    fIndsQuadArray.get(materialIndex).add(f);
+                if (numVertex == 4) {
+                    fIndsQuadArray.get(materialIndex).add(objFace(vertices, 0, 1, 2, 3));
                 } else {
-                    fIndsTriArray.get(materialIndex).add(f);
+                    // Faces with more than 4 vertices are split into a fan of triangles
+                    for (int i = 1; i + 1 < numVertex; i++) {
+                        fIndsTriArray.get(materialIndex).add(objFace(vertices, 0, i, i + 1));
+                    }
                 }
             }
         }
@@ -1738,4 +1736,14 @@ public class Tile {
 
     }
 
+    private static Face objFace(int[][] vertices, int... indices) {
+        Face f = new Face(indices.length == 4);
+        for (int i = 0; i < indices.length; i++) {
+            f.vInd[i] = vertices[indices[i]][0];
+            f.tInd[i] = vertices[indices[i]][1];
+            f.nInd[i] = vertices[indices[i]][2];
+            f.cInd[i] = vertices[indices[i]][3];
+        }
+        return f;
+    }
 }
