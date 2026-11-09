@@ -1207,7 +1207,11 @@ public class TilesetEditorDialog extends JDialog {
                 if (dialog.getReturnValue() == ImportTilesDialog.APPROVE_OPTION) {
                     ArrayList<Tile> tiles = dialog.getTilesSelected();
 
-                    handler.getTileset().importTiles(tiles);
+                    String sourceName = new File(path).getName();
+                    if (sourceName.toLowerCase().endsWith("." + Tileset.fileExtension)) {
+                        sourceName = sourceName.substring(0, sourceName.length() - Tileset.fileExtension.length() - 1);
+                    }
+                    handler.getTileset().importTiles(tiles, sourceName);
 
                     handler.getTileset().removeUnusedTextures();
 

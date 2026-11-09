@@ -423,6 +423,36 @@ public class Tileset {
         tiles.add(tile);
     }
 
+    /**
+     * Imports tiles and files them under a palette folder, so tiles taken from
+     * different source tilesets stay apart in the tile selector. Tile indices
+     * and everything else about the tileset are unaffected.
+     */
+    public void importTiles(ArrayList<Tile> tiles, String folderName) {
+        String path = folderPathFromName(folderName);
+        importTiles(tiles);
+        if (path.isEmpty()) {
+            return;
+        }
+        PaletteFolder folder = getPaletteFolder(path);
+        if (folder == null) {
+            folder = getOrCreatePaletteFolder(path);
+            folder.setRows(1);
+        }
+        for (Tile tile : tiles) {
+            tile.setPaletteSlot(-1);
+            tile.setPaletteFolder(path);
+        }
+    }
+
+    /** Folder path for a display name: no "/" (it separates nested folders). */
+    public static String folderPathFromName(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.replace('/', '-').replace('_', ' ').trim();
+    }
+
     public void importTiles(ArrayList<Tile> tiles) {
         for (Tile tile : tiles) {
             importTile(tile);
