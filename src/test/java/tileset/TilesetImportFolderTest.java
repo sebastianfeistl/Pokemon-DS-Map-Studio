@@ -52,10 +52,10 @@ class TilesetImportFolderTest {
         assertEquals("", project.get(0).getPaletteFolder());
         assertEquals("Mine", project.get(1).getPaletteFolder());
         for (int i : new int[]{2, 3, 4, 6, 7}) {
-            assertEquals("Tileset 53 PT Forest", project.get(i).getPaletteFolder(), "tile " + i);
+            assertEquals("Imported from Tileset 53 PT Forest", project.get(i).getPaletteFolder(), "tile " + i);
         }
-        assertEquals("Tileset 14 - Snow", project.get(5).getPaletteFolder());
-        assertNotNull(project.getPaletteFolder("Tileset 53 PT Forest"));
+        assertEquals("Imported from Tileset 14 - Snow", project.get(5).getPaletteFolder());
+        assertNotNull(project.getPaletteFolder("Imported from Tileset 53 PT Forest"));
         // Mine + two import folders; the forest folder was reused, not duplicated
         assertEquals(3, project.getPaletteFolders().stream().filter(f -> !f.getPath().isEmpty()).count());
     }
@@ -70,8 +70,8 @@ class TilesetImportFolderTest {
         Tileset loaded = TilesetIO.readTilesetFromFile(path);
         assertEquals(3, loaded.size());
         assertEquals("", loaded.get(0).getPaletteFolder());
-        assertEquals("Snow", loaded.get(1).getPaletteFolder());
-        assertEquals("Snow", loaded.get(2).getPaletteFolder());
+        assertEquals("Imported from Snow", loaded.get(1).getPaletteFolder());
+        assertEquals("Imported from Snow", loaded.get(2).getPaletteFolder());
     }
 
     @Test
@@ -98,7 +98,7 @@ class TilesetImportFolderTest {
         Tile imported = project.get(0);
         assertEquals(0x80, imported.getCollisionDefaults().get(0)[0][0]);
         assertEquals(0x01, imported.getCollisionDefaults().get(1)[0][0]);
-        assertEquals("library", imported.getPaletteFolder());
+        assertEquals("Imported from library", imported.getPaletteFolder());
     }
 
     @Test
@@ -115,7 +115,69 @@ class TilesetImportFolderTest {
                 new ArrayList<>(List.of(sameInB, onlyInB, repeatInB)), "Set B"));
 
         assertEquals(2, project.size());
-        assertEquals("Set A", project.get(0).getPaletteFolder()); // the shared tile stays where it was first filed
-        assertEquals("Set B", project.get(1).getPaletteFolder());
+        assertEquals("Imported from Set A", project.get(0).getPaletteFolder()); // the shared tile stays where it was first filed
+        assertEquals("Imported from Set B", project.get(1).getPaletteFolder());
+    }
+
+    /** A tile from an OBJ named objName using a texture named texName. */
+    private Tile named(Tileset tileset, String objName, String texName) throws Exception {
+        ImageIO.write(new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB), "png", dir.resolve(texName + ".png").toFile());
+        Files.writeString(dir.resolve(objName + ".mtl"), "newmtl m\nmap_Kd " + texName + ".png\n");
+        Files.writeString(dir.resolve(objName + ".obj"), "mtllib " + objName + ".mtl\n"
+                + "v 0 0 0\nv 1 0 0\nv 1 1 0\nvt 0 0\nvt 1 0\nvt 1 1\nvn 0 0 1\nusemtl m\nf 1/1/1 2/2/1 3/3/1\n");
+        return new Tile(tileset, new File(dir.toFile(), objName + ".obj").getPath());
+    }
+
+    @Test
+    void tilesAreSortedByTypeFromModelAndTextureNames() throws Exception {
+        Tileset src = new Tileset();
+        ArrayList<Tile> tiles = new ArrayList<>(List.of(
+                named(src, "Tree_snow", "tshadow_lm32"),        // model name says tree
+                named(src, "SeaPlateCorner", "asasea_lm25"),     // water
+                named(src, "GrassPathBorder", "lgreenp_lm2"),    // path, not grass
+                named(src, "Sand_road_l", "nsandp_lm96"),        // sand
+                named(src, "RockClimb", "hanger_lm4"),           // cliffs before rocks
+                named(src, "7", "allpeak_lm38"),                 // numbered: texture says cliff
+                named(src, "Fence", "imped_lm51"),
+                named(src, "Mystery", "unknown")));
+        Tileset project = new Tileset();
+        project.importTilesSkippingDuplicates(tiles, "Source A");
+        assertEquals(8, project.sortIntoCategoryFolders());
+
+        assertEquals(TileCategories.TREES, project.get(0).getPaletteFolder());
+        assertEquals(TileCategories.WATER, project.get(1).getPaletteFolder());
+        assertEquals(TileCategories.PATHS, project.get(2).getPaletteFolder());
+        assertEquals(TileCategories.SAND, project.get(3).getPaletteFolder());
+        assertEquals(TileCategories.CLIFFS, project.get(4).getPaletteFolder());
+        assertEquals(TileCategories.CLIFFS, project.get(5).getPaletteFolder());
+        assertEquals(TileCategories.OBJECTS, project.get(6).getPaletteFolder());
+        assertEquals(TileCategories.OTHER, project.get(7).getPaletteFolder());
+        assertNull(project.getPaletteFolder("Imported from Source A")); // emptied source folder is gone
+        // folders only for categories that have tiles, in display order
+        assertEquals(List.of(TileCategories.PATHS, TileCategories.TREES, TileCategories.CLIFFS, TileCategories.WATER,
+                        TileCategories.SAND, TileCategories.OBJECTS, TileCategories.OTHER),
+                project.getPaletteFolders().stream().map(PaletteFolder::getPath).filter(p -> !p.isEmpty()).toList());
+    }
+
+    @Test
+    void sortingKeepsHandMadeFoldersAndEarlierMoves() throws Exception {
+        Tileset src = new Tileset();
+        ArrayList<Tile> tiles = new ArrayList<>(List.of(named(src, "Tree", "t1"), named(src, "Tree_b", "t2")));
+        Tileset project = new Tileset();
+        project.importTilesSkippingDuplicates(tiles, "Source A");
+        project.getOrCreatePaletteFolder("My favourites");
+        project.sortIntoCategoryFolders();
+        project.get(1).setPaletteFolder("My favourites"); // moved by hand
+        project.getOrCreatePaletteFolder("Empty on purpose");
+
+        Tileset more = new Tileset();
+        project.importTilesSkippingDuplicates(new ArrayList<>(List.of(named(more, "Lake_surface", "lake"))), "Source B");
+        assertEquals(1, project.sortIntoCategoryFolders()); // only the new tile
+
+        assertEquals(TileCategories.TREES, project.get(0).getPaletteFolder());
+        assertEquals("My favourites", project.get(1).getPaletteFolder());
+        assertEquals(TileCategories.WATER, project.get(2).getPaletteFolder());
+        assertNotNull(project.getPaletteFolder("Empty on purpose"));
+        assertNull(project.getPaletteFolder("Imported from Source B"));
     }
 }

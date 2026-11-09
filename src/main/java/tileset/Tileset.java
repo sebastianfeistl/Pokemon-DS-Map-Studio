@@ -423,6 +423,9 @@ public class Tileset {
         tiles.add(tile);
     }
 
+    /** Folders made by importing tiles are named like this; the sort by type empties them. */
+    public static final String IMPORT_FOLDER_PREFIX = "Imported from ";
+
     /**
      * Imports tiles and files them under a palette folder, so tiles taken from
      * different source tilesets stay apart in the tile selector. Tile indices
@@ -430,6 +433,9 @@ public class Tileset {
      */
     public void importTiles(ArrayList<Tile> tiles, String folderName) {
         String path = folderPathFromName(folderName);
+        if (!path.isEmpty()) {
+            path = IMPORT_FOLDER_PREFIX + path;
+        }
         importTiles(tiles);
         if (path.isEmpty()) {
             return;
@@ -466,6 +472,65 @@ public class Tileset {
         }
         importTiles(fresh, folderName);
         return tiles.size() - fresh.size();
+    }
+
+    /**
+     * Files tiles into palette folders by what they are (see {@link TileCategories}).
+     * Only tiles that are in "All Tiles" or in a folder made by an import are
+     * moved, so tiles you filed by hand stay where they are. Import folders this
+     * empties are removed.
+     *
+     * @return the number of tiles moved
+     */
+    public int sortIntoCategoryFolders() {
+        return sortIntoCategoryFolders(folder -> folder.isEmpty() || folder.startsWith(IMPORT_FOLDER_PREFIX));
+    }
+
+    /** Same, for tiles whose current folder path is accepted by {@code movable}. */
+    public int sortIntoCategoryFolders(java.util.function.Predicate<String> movable) {
+        java.util.Map<Tile, String> target = new java.util.LinkedHashMap<>();
+        java.util.LinkedHashSet<String> emptied = new java.util.LinkedHashSet<>();
+        java.util.Set<String> needed = new java.util.HashSet<>();
+        for (Tile tile : tiles) {
+            String current = tile.getPaletteFolder();
+            if (TileCategories.ORDER.contains(current) || !movable.test(current)) {
+                continue;
+            }
+            String category = TileCategories.categorize(tile);
+            target.put(tile, category);
+            needed.add(category);
+            if (!current.isEmpty()) {
+                emptied.add(current);
+            }
+        }
+        for (String category : TileCategories.ORDER) { // creation order is display order
+            if (needed.contains(category) && getPaletteFolder(category) == null) {
+                getOrCreatePaletteFolder(category).setRows(1);
+            }
+        }
+        for (java.util.Map.Entry<Tile, String> e : target.entrySet()) {
+            e.getKey().setPaletteSlot(-1);
+            e.getKey().setPaletteFolder(e.getValue());
+        }
+        for (String path : emptied) {
+            PaletteFolder folder = getPaletteFolder(path);
+            if (folder != null && !hasTilesInFolder(path)) {
+                removePaletteFolder(folder);
+            }
+        }
+        return target.size();
+    }
+
+    private boolean hasTilesInFolder(String path) {
+        String prefix = path + "/";
+        for (Tile tile : tiles) {
+            for (String folder : tile.getPaletteFolderSlots().keySet()) {
+                if (folder.equals(path) || folder.startsWith(prefix)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** Folder path for a display name: no "/" (it separates nested folders). */
