@@ -445,6 +445,29 @@ public class Tileset {
         }
     }
 
+    /**
+     * Like {@link #importTiles(ArrayList, String)}, but skips tiles that already
+     * exist in this tileset (same model, see {@link Tile#modelKey()}), including
+     * repeats inside the imported batch. The existing tile keeps its folder and
+     * its collision defaults.
+     *
+     * @return the number of tiles skipped
+     */
+    public int importTilesSkippingDuplicates(ArrayList<Tile> tiles, String folderName) {
+        java.util.HashSet<String> known = new java.util.HashSet<>();
+        for (Tile tile : this.tiles) {
+            known.add(tile.modelKey());
+        }
+        ArrayList<Tile> fresh = new ArrayList<>();
+        for (Tile tile : tiles) {
+            if (known.add(tile.modelKey())) { // keys are taken before importTile re-points the textures
+                fresh.add(tile);
+            }
+        }
+        importTiles(fresh, folderName);
+        return tiles.size() - fresh.size();
+    }
+
     /** Folder path for a display name: no "/" (it separates nested folders). */
     public static String folderPathFromName(String name) {
         if (name == null) {

@@ -427,6 +427,31 @@ public class Tile {
         return true;
     }
 
+    /**
+     * Identity of the tile's model for telling copies of the same tile apart
+     * across tilesets: geometry, vertex colors, the texture images used and
+     * the tile size. Ignores file names, texture indices and editor metadata
+     * such as folders and collision defaults.
+     */
+    public String modelKey() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(width).append('x').append(height).append('|');
+        sb.append(vCoordsObj).append(tCoordsObj).append(nCoordsObj).append(colorsObj);
+        sb.append(Arrays.toString(colorsTri)).append(Arrays.toString(colorsQuad));
+        for (ArrayList<Face> faces : java.util.List.of(fIndsQuad, fIndsTri)) {
+            sb.append('#');
+            for (Face f : faces) {
+                sb.append(Arrays.toString(f.vInd)).append(Arrays.toString(f.tInd))
+                        .append(Arrays.toString(f.nInd)).append(Arrays.toString(f.cInd));
+            }
+        }
+        sb.append(texOffsetsQuad).append(texOffsetsTri);
+        for (int id : textureIDs) {
+            sb.append('|').append(tileset.getMaterial(id).getImageName());
+        }
+        return sb.toString();
+    }
+
     private void loadFromObj(String folderPath, String objName) throws IOException,
             TextureNotFoundException, NormalsNotFoundException {
         vCoordsObj = new ArrayList<>();

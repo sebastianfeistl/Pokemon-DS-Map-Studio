@@ -9,6 +9,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -98,5 +99,23 @@ class TilesetImportFolderTest {
         assertEquals(0x80, imported.getCollisionDefaults().get(0)[0][0]);
         assertEquals(0x01, imported.getCollisionDefaults().get(1)[0][0]);
         assertEquals("library", imported.getPaletteFolder());
+    }
+
+    @Test
+    void importSkipsTilesThatAlreadyExist() throws Exception {
+        Tile fromA = tile(new Tileset(), "same");
+        Tileset second = new Tileset();
+        Tile sameInB = tile(second, "same");
+        Tile onlyInB = tile(second, "other");
+        Tile repeatInB = tile(second, "other"); // repeated inside one import
+
+        Tileset project = new Tileset();
+        assertEquals(0, project.importTilesSkippingDuplicates(new ArrayList<>(List.of(fromA)), "Set A"));
+        assertEquals(2, project.importTilesSkippingDuplicates(
+                new ArrayList<>(List.of(sameInB, onlyInB, repeatInB)), "Set B"));
+
+        assertEquals(2, project.size());
+        assertEquals("Set A", project.get(0).getPaletteFolder()); // the shared tile stays where it was first filed
+        assertEquals("Set B", project.get(1).getPaletteFolder());
     }
 }

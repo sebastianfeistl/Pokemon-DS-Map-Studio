@@ -1211,7 +1211,11 @@ public class TilesetEditorDialog extends JDialog {
                     if (sourceName.toLowerCase().endsWith("." + Tileset.fileExtension)) {
                         sourceName = sourceName.substring(0, sourceName.length() - Tileset.fileExtension.length() - 1);
                     }
-                    handler.getTileset().importTiles(tiles, sourceName);
+                    int skipped = handler.getTileset().importTilesSkippingDuplicates(tiles, sourceName);
+                    if (skipped > 0) {
+                        JOptionPane.showMessageDialog(this, skipped + " of the selected tiles already exist in this tileset and were skipped.",
+                                "Import tiles", JOptionPane.INFORMATION_MESSAGE);
+                    }
 
                     handler.getTileset().removeUnusedTextures();
 
