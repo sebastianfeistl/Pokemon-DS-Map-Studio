@@ -38,6 +38,7 @@ public class ImdOutputInfoDialog extends JDialog {
     private ArrayList<String> fileNames;
     private String objFolderPath;
     private String imdFolderPath;
+    private boolean mergeTriangles = true;
 
     private Thread convertingThread;
 
@@ -105,11 +106,12 @@ public class ImdOutputInfoDialog extends JDialog {
     }
 
     public void init(MapEditorHandler handler, ArrayList<String> fileNames,
-                     String objFolderPath, String imdFolderPath) {
+                     String objFolderPath, String imdFolderPath, boolean mergeTriangles) {
         this.handler = handler;
         this.fileNames = fileNames;
         this.objFolderPath = objFolderPath;
         this.imdFolderPath = imdFolderPath;
+        this.mergeTriangles = mergeTriangles;
     }
 
     public void saveAllImds() {
@@ -131,7 +133,7 @@ public class ImdOutputInfoDialog extends JDialog {
                 ConvertStatus exportStatus;
                 ImdModel model = null;
                 try {
-                    model = new ImdModel(pathOpen, pathSave, handler.getTileset().getMaterials());
+                    model = new ImdModel(pathOpen, pathSave, handler.getTileset().getMaterials(), mergeTriangles);
 
                     final int maxNumPolygons = 1300;
                     final int maxNumTris = 1200;
