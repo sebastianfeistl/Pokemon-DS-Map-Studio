@@ -79,6 +79,7 @@ public class MainFrame extends JFrame {
         // changes with the display setup (external monitor plugged in or out), which squeezed or overlapped
         // panels while the editor ran. Plain pixels keep the layout stable.
         net.miginfocom.layout.PlatformDefaults.setLogicalPixelBase(net.miginfocom.layout.PlatformDefaults.BASE_REAL_PIXEL);
+        utils.swing.ScrollPaneIncrements.install();
         try {
             String theme = prefs.get("Theme", "Native");
             switch (theme) {
@@ -146,7 +147,10 @@ public class MainFrame extends JFrame {
 
         TileListResizeHandle(int direction) {
             this.direction = direction;
-            setPreferredSize(new Dimension(6, 0));
+            Dimension size = new Dimension(6, 0);
+            setPreferredSize(size);
+            setMinimumSize(size);
+            setMaximumSize(new Dimension(6, Short.MAX_VALUE));
             setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR));
             setToolTipText("Drag to resize the tile list");
             MouseAdapter drag = new MouseAdapter() {
@@ -174,33 +178,39 @@ public class MainFrame extends JFrame {
     }
 
     /**
-     * Thin drag strip left of the smart drawing panel. Dragging left widens the panel; it snaps to whole
-     * smart grids per row (1 to 6).
+     * One drag strip between the tile list and the smart drawing panel. Dragging trades width between them:
+     * right gives the tile list more tile columns (16 px each) and the smart drawing panel fewer grids per row
+     * (80 px each), left does the opposite.
      */
-    private class SmartListResizeHandle extends JPanel {
-        private static final int MIN_COLUMNS = 1;
-        private static final int MAX_COLUMNS = 6;
+    private class PanelSplitHandle extends JPanel {
         private int pressScreenX;
-        private int pressColumns;
+        private int pressTileWidth;
+        private int pressSmartWidth;
 
-        SmartListResizeHandle() {
-            setPreferredSize(new Dimension(6, 0));
+        PanelSplitHandle() {
+            Dimension size = new Dimension(6, 0);
+            setPreferredSize(size);
+            setMinimumSize(size);
+            setMaximumSize(new Dimension(6, Short.MAX_VALUE));
             setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR));
-            setToolTipText("Drag left to show more smart drawings per row, right for fewer");
+            setToolTipText("Drag to trade width between the tile list and the smart drawings");
             MouseAdapter drag = new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
                     pressScreenX = e.getXOnScreen();
-                    pressColumns = smartGridDisplay.getColumns();
+                    pressTileWidth = tileSelector.getColumns() * 16;
+                    pressSmartWidth = smartGridDisplay.getColumns() * smartGridWidth();
                 }
 
                 @Override
                 public void mouseDragged(MouseEvent e) {
-                    int delta = pressScreenX - e.getXOnScreen();
-                    int columns = pressColumns + Math.round(delta / (float) (SmartGrid.width * editor.grid.MapGrid.tileSize));
-                    columns = Math.max(MIN_COLUMNS, Math.min(MAX_COLUMNS, columns));
-                    if (columns != smartGridDisplay.getColumns()) {
-                        smartGridDisplay.setColumns(columns);
+                    int delta = e.getXOnScreen() - pressScreenX;
+                    int tileColumns = Math.max(4, Math.min(24, Math.round((pressTileWidth + delta) / 16f)));
+                    int smartColumns = Math.max(1, Math.min(6,
+                            Math.round((pressSmartWidth - delta) / (float) smartGridWidth())));
+                    if (tileColumns != tileSelector.getColumns() || smartColumns != smartGridDisplay.getColumns()) {
+                        tileSelector.setColumns(tileColumns);
+                        smartGridDisplay.setColumns(smartColumns);
                         jpMainWindow.revalidate();
                         jpMainWindow.repaint();
                     }
@@ -208,6 +218,10 @@ public class MainFrame extends JFrame {
             };
             addMouseListener(drag);
             addMouseMotionListener(drag);
+        }
+
+        private int smartGridWidth() {
+            return SmartGrid.width * editor.grid.MapGrid.tileSize;
         }
     }
 
@@ -2718,15 +2732,8 @@ public class MainFrame extends JFrame {
                 jpMainWindow.setLayout(new MigLayout(
                         "hidemode 3",
                         // columns
-                        "[fill]" +
-                                "[fill]" +
-                                "[grow,fill]" +
-                                "[fill]" +
-                                "[fill]" +
-                                "[fill]" +
-                                "[fill]" +
-                                "[fill]" +
-                                "[fill]",
+                        // columns 4-7 (tile list strip, tile list, shared strip, smart drawing) touch each other
+                        "[fill][fill][grow,fill][fill][fill]0[fill]0[fill]0[fill]",
                         // rows
                         "[grow,fill]"));
 
@@ -2880,7 +2887,7 @@ public class MainFrame extends JFrame {
                 }
                 jpMainWindow.add(new TileListResizeHandle(-1), "cell 4 0");
                 jpMainWindow.add(jpTileList, "cell 5 0");
-                jpMainWindow.add(new TileListResizeHandle(1), "cell 6 0");
+                jpMainWindow.add(new PanelSplitHandle(), "cell 6 0");
 
                 //======== jpSmartDrawing ========
                 {
@@ -2921,8 +2928,7 @@ public class MainFrame extends JFrame {
                                     .addComponent(jscSmartDrawing, GroupLayout.DEFAULT_SIZE, 0, Short.MAX_VALUE)
                     );
                 }
-                jpMainWindow.add(new SmartListResizeHandle(), "cell 7 0");
-                jpMainWindow.add(jpSmartDrawing, "cell 8 0");
+                jpMainWindow.add(jpSmartDrawing, "cell 7 0");
 
                 //======== jpButtons ========
                 {

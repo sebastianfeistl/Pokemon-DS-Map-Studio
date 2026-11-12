@@ -1631,7 +1631,7 @@ public class TileSelector extends JPanel {
             }
             int old = layout.section.folder.getPinnedScrollY();
             int next = Math.max(0, Math.min(maxScroll,
-                    old + evt.getWheelRotation() * tilePixelSize * 3));
+                    old + takeWholePixels(evt.getPreciseWheelRotation() * tilePixelSize * 3, true)));
             if (next != old) {
                 layout.section.folder.setPinnedScrollY(next);
                 evt.consume();
@@ -1643,6 +1643,26 @@ public class TileSelector extends JPanel {
         scrollMainTileList(evt);
     }
 
+    private double wheelRemainderPinned = 0;
+    private double wheelRemainderMain = 0;
+
+    /**
+     * Adds a fractional scroll amount to a remainder and returns the whole pixels to scroll now. Touchpads
+     * send many events with a tiny precise rotation; the integer rotation of such an event is 0, so using it
+     * would swallow the scroll.
+     */
+    private int takeWholePixels(double amount, boolean pinned) {
+        double total = (pinned ? wheelRemainderPinned : wheelRemainderMain) + amount;
+        int whole = (int) total; // toward zero
+        double rest = total - whole;
+        if (pinned) {
+            wheelRemainderPinned = rest;
+        } else {
+            wheelRemainderMain = rest;
+        }
+        return whole;
+    }
+
     private void scrollMainTileList(MouseWheelEvent evt) {
         JScrollPane scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(
                 JScrollPane.class, this);
@@ -1650,14 +1670,18 @@ public class TileSelector extends JPanel {
             return;
         }
         JScrollBar bar = scrollPane.getVerticalScrollBar();
-        int direction = evt.getWheelRotation() < 0 ? -1 : 1;
-        int delta;
+        double rotation = evt.getPreciseWheelRotation();
+        int direction = rotation < 0 ? -1 : 1;
+        double amount;
         if (evt.getScrollType() == MouseWheelEvent.WHEEL_BLOCK_SCROLL) {
-            delta = direction * bar.getBlockIncrement(direction);
+            amount = rotation * bar.getBlockIncrement(direction);
         } else {
-            delta = evt.getUnitsToScroll() * bar.getUnitIncrement(direction);
+            amount = rotation * evt.getScrollAmount() * bar.getUnitIncrement(direction);
         }
-        bar.setValue(bar.getValue() + delta);
+        int delta = takeWholePixels(amount, false);
+        if (delta != 0) {
+            bar.setValue(bar.getValue() + delta);
+        }
         evt.consume();
     }
 
