@@ -4,3 +4,6 @@
 /converter/g3dcvtr_help.bat
 /converter/xerces-c_2_5_0.dll
 build/
+/.jdk21/
+/libs-macos/
+/.run/

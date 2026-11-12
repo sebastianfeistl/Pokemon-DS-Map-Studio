@@ -75,6 +75,10 @@ public class MainFrame extends JFrame {
     private JLabel jlCursorCoords;
 
     public static void main(String[] args) {
+        // MigLayout scales sizes by "screen DPI now / DPI when first used". On macOS the main display's DPI
+        // changes with the display setup (external monitor plugged in or out), which squeezed or overlapped
+        // panels while the editor ran. Plain pixels keep the layout stable.
+        net.miginfocom.layout.PlatformDefaults.setLogicalPixelBase(net.miginfocom.layout.PlatformDefaults.BASE_REAL_PIXEL);
         try {
             String theme = prefs.get("Theme", "Native");
             switch (theme) {
@@ -159,6 +163,44 @@ public class MainFrame extends JFrame {
                     columns = Math.max(MIN_COLUMNS, Math.min(MAX_COLUMNS, columns));
                     if (columns != tileSelector.getColumns()) {
                         tileSelector.setColumns(columns);
+                        jpMainWindow.revalidate();
+                        jpMainWindow.repaint();
+                    }
+                }
+            };
+            addMouseListener(drag);
+            addMouseMotionListener(drag);
+        }
+    }
+
+    /**
+     * Thin drag strip left of the smart drawing panel. Dragging left widens the panel; it snaps to whole
+     * smart grids per row (1 to 6).
+     */
+    private class SmartListResizeHandle extends JPanel {
+        private static final int MIN_COLUMNS = 1;
+        private static final int MAX_COLUMNS = 6;
+        private int pressScreenX;
+        private int pressColumns;
+
+        SmartListResizeHandle() {
+            setPreferredSize(new Dimension(6, 0));
+            setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR));
+            setToolTipText("Drag left to show more smart drawings per row, right for fewer");
+            MouseAdapter drag = new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    pressScreenX = e.getXOnScreen();
+                    pressColumns = smartGridDisplay.getColumns();
+                }
+
+                @Override
+                public void mouseDragged(MouseEvent e) {
+                    int delta = pressScreenX - e.getXOnScreen();
+                    int columns = pressColumns + Math.round(delta / (float) (SmartGrid.width * editor.grid.MapGrid.tileSize));
+                    columns = Math.max(MIN_COLUMNS, Math.min(MAX_COLUMNS, columns));
+                    if (columns != smartGridDisplay.getColumns()) {
+                        smartGridDisplay.setColumns(columns);
                         jpMainWindow.revalidate();
                         jpMainWindow.repaint();
                     }
@@ -2683,6 +2725,7 @@ public class MainFrame extends JFrame {
                                 "[fill]" +
                                 "[fill]" +
                                 "[fill]" +
+                                "[fill]" +
                                 "[fill]",
                         // rows
                         "[grow,fill]"));
@@ -2878,7 +2921,8 @@ public class MainFrame extends JFrame {
                                     .addComponent(jscSmartDrawing, GroupLayout.DEFAULT_SIZE, 0, Short.MAX_VALUE)
                     );
                 }
-                jpMainWindow.add(jpSmartDrawing, "cell 7 0");
+                jpMainWindow.add(new SmartListResizeHandle(), "cell 7 0");
+                jpMainWindow.add(jpSmartDrawing, "cell 8 0");
 
                 //======== jpButtons ========
                 {
