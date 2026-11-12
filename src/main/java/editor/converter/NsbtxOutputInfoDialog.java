@@ -577,8 +577,7 @@ public class NsbtxOutputInfoDialog extends javax.swing.JDialog {
                             if (System.getProperty("os.name").toLowerCase().startsWith("windows")) {
                                 cmd = new String[]{converterPath, pathSave, "-etex", "-o", filename};
                             } else {
-                                cmd = new String[]{"wine", converterPath, pathSave, "-etex", "-o", filename};
-                                // NOTE: wine call works only with relative path
+                                cmd = new String[]{"wine", converterPath, ConverterLocator.toConverterPath(pathSave), "-etex", "-o", filename};
                             }
 
                             if (!Files.exists(Paths.get(converterPath))) {

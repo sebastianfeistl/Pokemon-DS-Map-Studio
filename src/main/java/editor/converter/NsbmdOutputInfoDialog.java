@@ -449,8 +449,7 @@ public class NsbmdOutputInfoDialog extends javax.swing.JDialog {
                     if (System.getProperty("os.name").toLowerCase().startsWith("windows")) {
                         imdPath = pathOpen;
                     } else {
-                        String cwd = System.getProperty("user.dir"); // get current user directory
-                        imdPath = new File(cwd).toURI().relativize(new File(pathOpen).toPath().toRealPath().toUri()).getPath(); //this is some serious java shit
+                        imdPath = ConverterLocator.toConverterPath(new File(pathOpen).toPath().toRealPath().toString());
                     }
 
                     String nsbPath = pathSave;

@@ -413,9 +413,8 @@ final class MapExportActions {
                     if (System.getProperty("os.name").toLowerCase().startsWith("windows")) {
                         imdPath = openChooser.getSelectedFile().getPath();
                     } else {
-                        String cwd = System.getProperty("user.dir");
-                        imdPath = new File(cwd).toURI()
-                                .relativize(openChooser.getSelectedFile().toPath().toRealPath().toUri()).getPath();
+                        imdPath = ConverterLocator.toConverterPath(
+                                openChooser.getSelectedFile().toPath().toRealPath().toString());
                     }
                     final SystemFileChooser saveChooser = new SystemFileChooser();
                     saveChooser.setSelectedFile(new File(Utils.removeExtensionFromPath(handler.getMapMatrix().filePath)));
