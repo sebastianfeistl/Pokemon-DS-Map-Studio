@@ -429,8 +429,9 @@ public class Tile {
 
     /**
      * Identity of the tile's model for telling copies of the same tile apart
-     * across tilesets: geometry, vertex colors, the texture images used and
-     * the tile size. Ignores file names, texture indices and editor metadata
+     * across tilesets: geometry, vertex colors, the texture images used
+     * (compared by pixels) and the tile size. Ignores file names, texture
+     * file names, texture indices and editor metadata
      * such as folders and collision defaults.
      */
     public String modelKey() {
@@ -447,7 +448,8 @@ public class Tile {
         }
         sb.append(texOffsetsQuad).append(texOffsetsTri);
         for (int id : textureIDs) {
-            sb.append('|').append(tileset.getMaterial(id).getImageName());
+            // by pixels, not file name: tilesets reuse names like "file1Material.png" for different images
+            sb.append('|').append(tileset.getMaterial(id).pixelKey());
         }
         return sb.toString();
     }

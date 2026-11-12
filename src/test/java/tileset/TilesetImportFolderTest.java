@@ -20,8 +20,20 @@ class TilesetImportFolderTest {
     @TempDir
     Path dir;
 
+    /** Writes name.png filled with a color derived from the name: tiles compare textures by pixels. */
+    private void texture(String name) throws Exception {
+        BufferedImage img = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);
+        int argb = 0xFF000000 | name.hashCode();
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                img.setRGB(x, y, argb);
+            }
+        }
+        ImageIO.write(img, "png", dir.resolve(name + ".png").toFile());
+    }
+
     private Tile tile(Tileset tileset, String name) throws Exception {
-        ImageIO.write(new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB), "png", dir.resolve(name + ".png").toFile());
+        texture(name);
         Files.writeString(dir.resolve(name + ".mtl"), "newmtl m\nmap_Kd " + name + ".png\n");
         Files.writeString(dir.resolve(name + ".obj"), "mtllib " + name + ".mtl\n"
                 + "v 0 0 0\nv 1 0 0\nv 1 1 0\nvt 0 0\nvt 1 0\nvt 1 1\nvn 0 0 1\nusemtl m\nf 1/1/1 2/2/1 3/3/1\n");
@@ -121,7 +133,7 @@ class TilesetImportFolderTest {
 
     /** A tile from an OBJ named objName using a texture named texName. */
     private Tile named(Tileset tileset, String objName, String texName) throws Exception {
-        ImageIO.write(new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB), "png", dir.resolve(texName + ".png").toFile());
+        texture(texName);
         Files.writeString(dir.resolve(objName + ".mtl"), "newmtl m\nmap_Kd " + texName + ".png\n");
         Files.writeString(dir.resolve(objName + ".obj"), "mtllib " + objName + ".mtl\n"
                 + "v 0 0 0\nv 1 0 0\nv 1 1 0\nvt 0 0\nvt 1 0\nvt 1 1\nvn 0 0 1\nusemtl m\nf 1/1/1 2/2/1 3/3/1\n");

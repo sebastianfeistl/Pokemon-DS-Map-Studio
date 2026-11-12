@@ -392,4 +392,31 @@ public class TilesetMaterial {
         this.vertexColorsEnabled = enabled;
     }
 
+    /**
+     * Identity of the texture by its pixels: size plus a SHA-256 of the ARGB
+     * values. Two materials with the same key show the same image, whatever
+     * their file names. Falls back to the image name when no image is loaded.
+     */
+    public String pixelKey() {
+        if (textureImg == null) {
+            return "name:" + imageName;
+        }
+        int w = textureImg.getWidth();
+        int h = textureImg.getHeight();
+        int[] argb = textureImg.getRGB(0, 0, w, h, null, 0, w);
+        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(argb.length * 4);
+        buf.asIntBuffer().put(argb);
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256").digest(buf.array());
+            return w + "x" + h + ":" + java.util.HexFormat.of().formatHex(digest);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** True if both materials show the same pixels (see {@link #pixelKey()}). */
+    public boolean samePixels(TilesetMaterial other) {
+        return pixelKey().equals(other.pixelKey());
+    }
+
 }
