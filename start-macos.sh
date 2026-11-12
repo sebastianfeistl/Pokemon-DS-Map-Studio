@@ -31,6 +31,14 @@ fi
 for p in "/Applications/Wine Stable.app/Contents/Resources/wine/bin" "/Applications/Wine Devel.app/Contents/Resources/wine/bin" "/Applications/Wine Staging.app/Contents/Resources/wine/bin"; do
     [ -d "$p" ] && PATH="$p:$PATH"
 done
+# The pokeplatinum mod repo keeps its own Wine (tools/mod/mac_setup.sh); prefer it when present.
+MOD_REPO="${PDSMS_MOD_REPO:-$ROOT/../pokeplatinum}"
+MOD_WINE="$MOD_REPO/.wine-app/Wine Stable.app/Contents/Resources/wine/bin"
+if [ -d "$MOD_WINE" ]; then
+    PATH="$MOD_WINE:$PATH"
+    export WINEPREFIX="${WINEPREFIX:-$MOD_REPO/.wine-mod}"
+    export WINEDEBUG="${WINEDEBUG:--all}"
+fi
 export PATH
 mkdir -p "$ROOT/.run" && cd "$ROOT/.run" || exit 1
 exec java --enable-native-access=ALL-UNNAMED -cp "$JOGAMP:$JAR" editor.MainFrame "$@"
