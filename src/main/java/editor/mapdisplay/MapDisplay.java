@@ -721,13 +721,15 @@ public class MapDisplay extends GLJPanel implements GLEventListener, MouseListen
     }
 
     protected void drawHeightMap(Graphics g, int[][] heightGrid, int xOffset, int yOffset) {
+        ImageBatch batch = new ImageBatch();
         for (int i = 0; i < cols; i++) {
             for (int j = 0; j < rows; j++) {
                 int x = (i + borderSize) * tileSize + xOffset;
                 int y = (rows - 1 - j + borderSize) * tileSize + yOffset;
-                g.drawImage(handler.getHeightImageByValue(heightGrid[i][j]), x, y, null);
+                batch.add(handler.getHeightImageByValue(heightGrid[i][j]), x, y);
             }
         }
+        batch.draw(g);
     }
 
     protected void drawActiveHeightMap(Graphics g) {
@@ -2765,6 +2767,7 @@ public class MapDisplay extends GLJPanel implements GLEventListener, MouseListen
         Graphics2D g2d = (Graphics2D) g;
         java.awt.Composite oldComposite = g2d.getComposite();
         g2d.setComposite(AlphaComposite.SrcOver.derive(0.6f));
+        ImageBatch batch = new ImageBatch();
         for (int i = 0; i < w; i++) {
             for (int j = 0; j < h; j++) {
                 if (mask != null && !mask[i][j]) {
@@ -2775,10 +2778,11 @@ public class MapDisplay extends GLJPanel implements GLEventListener, MouseListen
                     Tile tile = handler.getTileset().get(index);
                     int x = (ax + i) * tileSize;
                     int y = (ay + (h - 1 - j) - (tile.getHeight() - 1)) * tileSize;
-                    g.drawImage(tile.getThumbnail(), x, y, null);
+                    batch.add(tile.getThumbnail(), x, y);
                 }
             }
         }
+        batch.draw(g);
         g2d.setComposite(oldComposite);
         g2d.setColor(Color.orange);
         g2d.drawRect(ax * tileSize, ay * tileSize, w * tileSize, h * tileSize);
@@ -2801,11 +2805,13 @@ public class MapDisplay extends GLJPanel implements GLEventListener, MouseListen
         Graphics2D g2d = (Graphics2D) g;
         java.awt.Composite oldComposite = g2d.getComposite();
         g2d.setComposite(AlphaComposite.SrcOver.derive(0.6f));
+        ImageBatch batch = new ImageBatch();
         for (Point cell : cells) {
             int x = xOffset + cell.x * tileSize;
             int y = yOffset + (rows - 1 - cell.y - (tile.getHeight() - 1)) * tileSize;
-            g.drawImage(tile.getThumbnail(), x, y, null);
+            batch.add(tile.getThumbnail(), x, y);
         }
+        batch.draw(g);
         g2d.setComposite(oldComposite);
         g2d.setColor(Color.red);
         for (Point cell : cells) {
@@ -2843,6 +2849,7 @@ public class MapDisplay extends GLJPanel implements GLEventListener, MouseListen
         Graphics2D g2d = (Graphics2D) g;
         java.awt.Composite oldComposite = g2d.getComposite();
         g2d.setComposite(AlphaComposite.SrcOver.derive(0.6f));
+        ImageBatch batch = new ImageBatch();
         for (int x = 0; x < cols; x++) {
             for (int y = 0; y < rows; y++) {
                 if (!mask[x][y] || resolved[x][y] < 0) {
@@ -2851,11 +2858,12 @@ public class MapDisplay extends GLJPanel implements GLEventListener, MouseListen
                 int tileIndex = resolved[x][y];
                 if (tileIndex >= 0 && tileIndex < handler.getTileset().size()) {
                     Tile tile = handler.getTileset().get(tileIndex);
-                    g.drawImage(tile.getThumbnail(), xOffset + x * tileSize,
-                            yOffset + (rows - 1 - y - (tile.getHeight() - 1)) * tileSize, null);
+                    batch.add(tile.getThumbnail(), xOffset + x * tileSize,
+                            yOffset + (rows - 1 - y - (tile.getHeight() - 1)) * tileSize);
                 }
             }
         }
+        batch.draw(g);
         g2d.setComposite(oldComposite);
         g2d.setColor(Color.red);
         for (int x = 0; x < cols; x++) {
