@@ -111,7 +111,7 @@ public class MapMatrix {
         updateExportgroupColors(getExportGroupIndices());
     }
 
-    public void saveGridsToFile(String path, Set<Map.Entry<Point, MapData>> entrySet) throws FileNotFoundException {
+    public void saveGridsToFile(String path, Set<Map.Entry<Point, MapData>> entrySet) throws IOException {
         if (!path.endsWith("." + fileExtension)) {
             path = path.concat("." + fileExtension);
         }
@@ -127,7 +127,7 @@ public class MapMatrix {
      * minCoords, which must be the min coords of the maps that will be loaded
      * back from this file, so that their per-map files keep matching names.
      */
-    private void writeGridsToFile(String path, Set<Map.Entry<Point, MapData>> entrySet, Point minCoords) throws FileNotFoundException {
+    private void writeGridsToFile(String path, Set<Map.Entry<Point, MapData>> entrySet, Point minCoords) throws IOException {
         PrintWriter out = new PrintWriter(path);
 
         out.println(gameIndexTag);
@@ -166,7 +166,12 @@ public class MapMatrix {
             out.println(mapEndTag);
         }
 
+        //PrintWriter hides write errors (e.g. a full disk) until asked
+        boolean failed = out.checkError();
         out.close();
+        if (failed) {
+            throw new IOException("Could not finish writing " + path);
+        }
     }
 
     public void loadGridsFromFile(String path) throws FileNotFoundException, IOException, Exception {
