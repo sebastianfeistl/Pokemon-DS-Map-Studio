@@ -37,7 +37,7 @@ public class MapEditorHandler {
 
     private static final String FALLBACK_VERSION = "2.5";
     public static final String versionName = "Pokemon DS Map Studio v"
-            + getApplicationVersion() + " [AdAstra]";
+            + getApplicationVersion();
 
     private static String getApplicationVersion() {
         String version = MapEditorHandler.class.getPackage().getImplementationVersion();

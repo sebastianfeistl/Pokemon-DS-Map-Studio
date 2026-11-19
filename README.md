@@ -50,4 +50,6 @@ which fixes a crash of the 3D view on recent macOS versions.
 
 ## Credits
 
-Based on Pokémon DS Map Studio by Trifindo and the fork by AdAstra-LD.
+Based on [Pokémon DS Map Studio](https://github.com/Trifindo/Pokemon-DS-Map-Studio) by Trifindo and its
+[fork by AdAstra-LD](https://github.com/AdAstra-LD/Pokemon-DS-Map-Studio), with contributions from the people listed in
+the About window.
