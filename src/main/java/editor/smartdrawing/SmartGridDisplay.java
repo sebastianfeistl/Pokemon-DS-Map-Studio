@@ -13,6 +13,7 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -183,59 +184,74 @@ public class SmartGridDisplay extends JPanel {
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
-
-        if (gridImage != null && handler != null) {
-            for (int k = 0; k < handler.getSmartGridArray().size(); k++) {
-                paintFolderHeader(g, k);
-                if (isSmartFolderCollapsed(handler.getSmartGrid(k).getPaletteFolder())) {
-                    continue;
-                }
-                g.drawImage(gridImage, getGridX(k),
-                        getGridY(k), null);
-            }
-
+        if (handler == null) {
+            return;
         }
 
-        if (handler != null) {
-            for (int k = 0; k < handler.getSmartGridArray().size(); k++) {
-                SmartGrid sg = handler.getSmartGrid(k);
-                if (isSmartFolderCollapsed(sg.getPaletteFolder())) {
-                    continue;
-                }
-                int[][] grid = sg.sgrid;
-                for (int i = 0; i < SmartGrid.width; i++) {
-                    for (int j = 0; j < SmartGrid.height; j++) {
-                        int indexTile = grid[i][j];
-                        if (indexTile != -1) {
-                            try {
-                                BufferedImage img = handler.getTileset().get(indexTile).getThumbnail();
-                                g.drawImage(
-                                        img,
-                                        getGridX(k) + i * MapGrid.tileSize,
-                                        getGridY(k) + j * MapGrid.tileSize,
-                                        null);
-                            } catch (Exception ex) {
-                                ex.printStackTrace();
-                            }
+        SmartGridLayout layout = gridLayout();
+        for (int k = 0; k < handler.getSmartGridArray().size(); k++) {
+            paintFolderHeader(g, k, layout);
+        }
+
+        Rectangle area = new Rectangle(0, 0, getWidth(), getHeight());
+        Rectangle clip = g.getClipBounds();
+        clip = clip == null ? area : clip.intersection(area);
+        if (!clip.isEmpty()) {
+            g.drawImage(renderGrids(layout, clip), clip.x, clip.y, null);
+        }
+
+        int index = handler.getSmartGridIndexSelected();
+        if (index >= 0 && index < handler.getSmartGridArray().size() && layout.visible[index]) {
+            g.setColor(Color.red);
+            g.drawRect(layout.x[index], layout.y[index],
+                    SmartGrid.width * MapGrid.tileSize - 1,
+                    SmartGrid.height * MapGrid.tileSize - 1);
+            g.setColor(new Color(255, 100, 100, 50));
+            g.fillRect(layout.x[index], layout.y[index],
+                    SmartGrid.width * MapGrid.tileSize - 1,
+                    SmartGrid.height * MapGrid.tileSize - 1);
+        }
+    }
+
+    /**
+     * Draws the grid backgrounds and tile thumbnails inside {@code clip} into one image, which the panel then
+     * draws in a single call. Drawing every 16x16 thumbnail straight to the screen garbles pixels with the
+     * macOS Metal pipeline: some of the many small image draws get black or stale pixels or magenta blocks,
+     * different ones on every repaint. One image per repaint does not.
+     */
+    private BufferedImage renderGrids(SmartGridLayout layout, Rectangle clip) {
+        BufferedImage buffer = new BufferedImage(clip.width, clip.height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = buffer.createGraphics();
+        g.translate(-clip.x, -clip.y);
+        int cellWidth = SmartGrid.width * MapGrid.tileSize;
+        int cellHeight = SmartGrid.height * MapGrid.tileSize;
+        for (int k = 0; k < handler.getSmartGridArray().size(); k++) {
+            if (!layout.visible[k] || !clip.intersects(layout.x[k], layout.y[k], cellWidth, cellHeight)) {
+                continue;
+            }
+            if (gridImage != null) {
+                g.drawImage(gridImage, layout.x[k], layout.y[k], null);
+            }
+            int[][] grid = handler.getSmartGrid(k).sgrid;
+            for (int i = 0; i < SmartGrid.width; i++) {
+                for (int j = 0; j < SmartGrid.height; j++) {
+                    int indexTile = grid[i][j];
+                    if (indexTile != -1) {
+                        try {
+                            BufferedImage img = handler.getTileset().get(indexTile).getThumbnail();
+                            g.drawImage(img,
+                                    layout.x[k] + i * MapGrid.tileSize,
+                                    layout.y[k] + j * MapGrid.tileSize,
+                                    null);
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
                         }
                     }
                 }
             }
-
-            int index = handler.getSmartGridIndexSelected();
-            if (index >= 0 && index < handler.getSmartGridArray().size()
-                    && !isSmartFolderCollapsed(handler.getSmartGrid(index).getPaletteFolder())) {
-                g.setColor(Color.red);
-                g.drawRect(getGridX(index), getGridY(index),
-                        SmartGrid.width * MapGrid.tileSize - 1,
-                        SmartGrid.height * MapGrid.tileSize - 1);
-                g.setColor(new Color(255, 100, 100, 50));
-                g.fillRect(getGridX(index), getGridY(index),
-                        SmartGrid.width * MapGrid.tileSize - 1,
-                        SmartGrid.height * MapGrid.tileSize - 1);
-            }
         }
-
+        g.dispose();
+        return buffer;
     }
 
     public void updateSize() {
@@ -300,12 +316,12 @@ public class SmartGridDisplay extends JPanel {
         return gridLayout().gridAt(px, py);
     }
 
-    private void paintFolderHeader(Graphics g, int index) {
-        String folder = handler.getSmartGrid(index).getPaletteFolder();
-        if (index > 0 && folder.equals(handler.getSmartGrid(index - 1).getPaletteFolder())) {
+    private void paintFolderHeader(Graphics g, int index, SmartGridLayout layout) {
+        int y = layout.headerY[index];
+        if (y < 0) {
             return;
         }
-        int y = gridLayout().headerY[index];
+        String folder = handler.getSmartGrid(index).getPaletteFolder();
         Color bg = UIManager.getColor("Panel.background");
         Color fg = UIManager.getColor("Label.foreground");
         g.setColor(bg == null ? Color.darkGray : bg.darker());
