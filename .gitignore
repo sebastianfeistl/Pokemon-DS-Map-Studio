@@ -7,3 +7,4 @@ build/
 /.jdk21/
 /libs-macos/
 /.run/
+/start-macos.local

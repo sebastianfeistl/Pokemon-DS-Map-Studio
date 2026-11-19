@@ -21,7 +21,7 @@ test {
     useJUnitPlatform()
 }
 
-version '2.4'
+version '2.5'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -73,8 +73,45 @@ tasks.register('portableDist', Sync) {
     from('packaging/launchers')
     from('converter') {
         into 'converter'
+        exclude 'g3dcvtr*'  // user-supplied, never redistributed
     }
     from('README.md', 'RELEASE_NOTES.md')
+}
+
+// macOS: the jar, JOGL 2.6.0 (libs-macos/jogamp-fat-2.6.0.jar, first on the classpath; fixes the 3D view
+// crash on recent macOS) and a double-clickable start script.
+tasks.register('macosDist', Sync) {
+    dependsOn jar
+    into layout.buildDirectory.dir("macos/${releaseBaseName}-macOS")
+
+    from(tasks.named('jar')) {
+        rename { 'Pokemon DS Map Studio.jar' }
+    }
+    from('libs-macos/jogamp-fat-2.6.0.jar') {
+        into 'lib'
+    }
+    from('packaging/macos') {
+        filePermissions { unix(0755) }
+    }
+    from('converter') {
+        into 'converter'
+        exclude 'g3dcvtr*'  // user-supplied, never redistributed
+    }
+    from('README.md', 'RELEASE_NOTES.md')
+    doFirst {
+        if (!file('libs-macos/jogamp-fat-2.6.0.jar').exists()) {
+            throw new GradleException('libs-macos/jogamp-fat-2.6.0.jar missing (jogamp-fat.jar 2.6.0 from jogamp.org)')
+        }
+    }
+}
+
+tasks.register('macosZip', Zip) {
+    dependsOn tasks.named('macosDist')
+    archiveFileName = "${releaseBaseName}-macOS.zip"
+    destinationDirectory = layout.buildDirectory.dir('release')
+    from(layout.buildDirectory.dir("macos/${releaseBaseName}-macOS")) {
+        into "${releaseBaseName}-macOS"
+    }
 }
 
 tasks.register('portableZip', Zip) {

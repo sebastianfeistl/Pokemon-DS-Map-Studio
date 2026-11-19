@@ -26,6 +26,27 @@ jobs:
           name: portable-release
           path: build/release/*.zip
 
+  build-macos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - name: Download JOGL 2.6.0 (fixes the 3D view crash on recent macOS)
+        run: |
+          mkdir -p libs-macos
+          curl -fsSL -o libs-macos/jogamp-fat-2.6.0.jar https://jogamp.org/deployment/v2.6.0/fat/jogamp-fat.jar
+          echo "12efc0d5b0ca7f850a74382b9acdea4158c99d70023fb474c8cf2927d454a88e  libs-macos/jogamp-fat-2.6.0.jar" | sha256sum -c -
+      - run: chmod +x gradlew
+      - run: ./gradlew clean test macosZip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: build/release/*.zip
+
   build-windows:
     runs-on: windows-latest
     steps:
@@ -58,7 +79,7 @@ jobs:
 
   publish:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [build-portable, build-windows]
+    needs: [build-portable, build-macos, build-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +91,7 @@ jobs:
         run: cd release && sha256sum *.zip > SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
+          draft: true
           body_path: RELEASE_NOTES.md
           files: |
             release/*.zip

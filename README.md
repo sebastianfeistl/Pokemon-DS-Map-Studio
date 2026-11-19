@@ -13,16 +13,28 @@ Supported games: Diamond/Pearl, Platinum, HeartGold/SoulSilver, Black/White, Bla
   same-named textures with different pixels apart.
 - A Smart Drawing panel that shows several drawings per row, sharing one resizable splitter with the
   tile list.
+- IMD export that merges triangle pairs into quads, and OBJ tile import for faces with more than 4
+  vertices.
+- Much faster and safer saving, with save errors shown instead of failing silently.
 - macOS support: a launcher script, sharp screenshots on Retina screens, and clean Smart Drawing
   previews.
 
 ## Running
 
+Download the latest release from the Releases page:
+
+- **macOS:** unzip `…-macOS.zip` and double-click `Pokemon DS Map Studio.command` (the first time,
+  right-click it and choose Open). Needs Java 11 or newer.
+- **Windows:** unzip `…-Windows.zip` and start `Pokemon DS Map Studio.exe` (Java included).
+- **Other systems:** unzip `…-Portable.zip` and run `java -jar "Pokemon DS Map Studio.jar"`.
+
+### From source
+
 Build from source with JDK 21 or older (Gradle doesn't run on newer JDKs):
 
 ```shell
 ./gradlew jar
-java -jar "build/libs/Pokemon DS Map Studio-2.4.jar"
+java -jar "build/libs/Pokemon DS Map Studio-2.5.jar"
 ```
 
 On macOS, use `./start-macos.sh` instead. It rebuilds the jar when the sources have changed, then
