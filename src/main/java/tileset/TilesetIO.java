@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -541,8 +542,8 @@ public class TilesetIO {
             throws IOException {
         int size = readInt(in);
         byte[] data = new byte[size];
-        in.read(data);
-        return new String(data);
+        in.readNBytes(data, 0, data.length);
+        return new String(data, StandardCharsets.UTF_8);
     }
 
     private static int[][] readIntMatrixElement(InputStream in) throws IOException {
@@ -574,13 +575,13 @@ public class TilesetIO {
 
     private static int readInt(InputStream in) throws IOException {
         byte[] data = new byte[Integer.BYTES];
-        in.read(data);
+        in.readNBytes(data, 0, data.length);
         return ByteBuffer.wrap(data).getInt();
     }
 
     private static float readFloat(InputStream in) throws IOException {
         byte[] data = new byte[Float.BYTES];
-        in.read(data);
+        in.readNBytes(data, 0, data.length);
         return ByteBuffer.wrap(data).getFloat();
     }
 
@@ -620,9 +621,11 @@ public class TilesetIO {
 
     private static void writeStringElement(OutputStream out, byte tag, String data)
             throws IOException {
+        //The size is the number of bytes, which differs from length() for non-ASCII names
+        byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
         writeTag(out, tag);
-        writeIntValue(out, data.length());
-        writeString(out, data);
+        writeIntValue(out, bytes.length);
+        out.write(bytes);
     }
 
     private static void writeIntElement(OutputStream out, byte tag, ArrayList<Integer> data)
@@ -693,11 +696,6 @@ public class TilesetIO {
         writeTag(out, tag);
         writeIntValue(out, 1);
         writeIntValue(out, data ? 1 : 0);
-    }
-
-    private static void writeString(OutputStream out, String s)
-            throws IOException {
-        out.write(s.getBytes());
     }
 
     private static void writeIntArray(OutputStream out, int[] data)
