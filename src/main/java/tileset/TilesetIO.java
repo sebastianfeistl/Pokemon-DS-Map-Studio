@@ -105,10 +105,16 @@ public class TilesetIO {
             throw ex;
         }
         try {
-            Files.move(temp.toPath(), target.toPath(),
-                    StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (AtomicMoveNotSupportedException ex) {
-            Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            try {
+                Files.move(temp.toPath(), target.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException ex) {
+                Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException | RuntimeException ex) {
+            //The old tileset is still in place; don't leave the temporary file behind
+            temp.delete();
+            throw ex;
         }
 
         //Palette folders / tile names / collision defaults sidecar

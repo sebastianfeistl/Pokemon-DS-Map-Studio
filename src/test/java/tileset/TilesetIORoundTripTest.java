@@ -12,6 +12,8 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TilesetIORoundTripTest {
 
@@ -50,5 +52,16 @@ class TilesetIORoundTripTest {
         String twice = dir.resolve("twice.pdsts").toString();
         TilesetIO.writeTilesetToFile(twice, TilesetIO.readTilesetFromFile(again));
         assertArrayEquals(Files.readAllBytes(Path.of(again)), Files.readAllBytes(Path.of(twice)));
+    }
+
+    @Test
+    void failedMoveLeavesNoTemporaryFile() throws Exception {
+        //A non-empty folder where the tileset should go makes the move fail
+        Path target = dir.resolve("blocked.pdsts");
+        Files.createDirectories(target.resolve("inside"));
+
+        assertThrows(java.io.IOException.class, () -> TilesetIO.writeTilesetToFile(target.toString(), new Tileset()));
+        assertFalse(new File(target + ".tmp").exists());
+        assertTrue(Files.isDirectory(target.resolve("inside")));
     }
 }
