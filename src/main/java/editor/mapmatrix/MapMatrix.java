@@ -117,7 +117,8 @@ public class MapMatrix {
         }
 
         removeUnusedMaps();
-        removeAllUnusedMapFiles();
+        //Clean up next to the file being written (Save As writes to a new folder and name)
+        removeAllUnusedMapFiles(new File(path).getParent(), new File(path).getName(), matrix);
 
         writeGridsToFile(path, entrySet, getMinCoords());
     }
@@ -332,7 +333,7 @@ public class MapMatrix {
         }
         String areaFilePath = dirPath + File.separator + "AD" + areaToSave + "." + fileExtension;
 
-        removeAllUnusedMapFiles(dirPath, areaMaps);
+        removeAllUnusedMapFiles(dirPath, new File(areaFilePath).getName(), areaMaps);
         writeGridsToFile(areaFilePath, areaMaps.entrySet(), getMinCoords(areaMaps));
 
         Set<Map.Entry<Point, MapData>> areaEntrySet = areaMaps.entrySet();
@@ -959,29 +960,31 @@ public class MapMatrix {
     }
 
     public void removeAllUnusedMapFiles() {
-        removeAllUnusedMapFiles(new File(filePath).getParent(), matrix);
+        removeAllUnusedMapFiles(new File(filePath).getParent(), new File(filePath).getName(), matrix);
     }
 
     /**
-     * Deletes the per-map files in folderPath whose coords don't belong to any
-     * map of layout (coords in the file names are relative to its min coords).
+     * Deletes the per-map files of the map mapFileName in folderPath whose
+     * coords don't belong to any map of layout (coords in the file names are
+     * relative to its min coords). Files of other maps in the folder are kept.
      */
-    private void removeAllUnusedMapFiles(String folderPath, HashMap<Point, MapData> layout) {
+    private void removeAllUnusedMapFiles(String folderPath, String mapFileName, HashMap<Point, MapData> layout) {
+        String mapName = Utils.removeExtensionFromPath(mapFileName);
         try {
-            removeUnusedMapFiles(folderPath, layout, "obj");
-            removeUnusedMapFiles(folderPath, layout, "mtl");
-            removeUnusedMapFiles(folderPath, layout, "imd");
-            removeUnusedMapFiles(folderPath, layout, "nsbmd");
-            removeUnusedMapFiles(folderPath, layout, Bdhc.fileExtension);
-            removeUnusedMapFiles(folderPath, layout, Collisions.fileExtension);
-            removeUnusedMapFiles(folderPath, layout, BuildFile.fileExtension);
-            removeUnusedMapFiles(folderPath, layout, Backsound.fileExtension);
+            removeUnusedMapFiles(folderPath, mapName, layout, "obj");
+            removeUnusedMapFiles(folderPath, mapName, layout, "mtl");
+            removeUnusedMapFiles(folderPath, mapName, layout, "imd");
+            removeUnusedMapFiles(folderPath, mapName, layout, "nsbmd");
+            removeUnusedMapFiles(folderPath, mapName, layout, Bdhc.fileExtension);
+            removeUnusedMapFiles(folderPath, mapName, layout, Collisions.fileExtension);
+            removeUnusedMapFiles(folderPath, mapName, layout, BuildFile.fileExtension);
+            removeUnusedMapFiles(folderPath, mapName, layout, Backsound.fileExtension);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
 
-    private void removeUnusedMapFiles(String folderPath, HashMap<Point, MapData> layout, String fileExtension) {
+    private void removeUnusedMapFiles(String folderPath, String mapName, HashMap<Point, MapData> layout, String fileExtension) {
         Point minCoords = getMinCoords(layout);
 
         if (folderPath != null) {
@@ -989,7 +992,11 @@ public class MapMatrix {
             File[] filesToRemove = folder.listFiles(new FilenameFilter() {
                 @Override
                 public boolean accept(File dir, String name) {
-                    return canRemoveMapFile(name, fileExtension, layout, minCoords);
+                    //Per-map files are named mapName + suffix + "_XX_YY"; the map's own files (e.g. a
+                    //whole map export named "route_1_2.imd") have nothing after the map name
+                    return name.startsWith(mapName)
+                            && Utils.removeExtensionFromPath(name).length() > mapName.length()
+                            && canRemoveMapFile(name, fileExtension, layout, minCoords);
                 }
             });
             if (filesToRemove == null) {
