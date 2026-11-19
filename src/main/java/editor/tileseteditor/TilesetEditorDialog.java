@@ -1183,6 +1183,21 @@ public class TilesetEditorDialog extends JDialog {
         }
     }
 
+    private void jbSortByTypeActionPerformed(ActionEvent evt) {
+        final int answer = JOptionPane.showConfirmDialog(this,
+                "File the tiles in All Tiles and in \"" + Tileset.IMPORT_FOLDER_PREFIX + "...\" folders into folders by type?\n"
+                        + "Tiles you already put in other folders stay where they are.",
+                "Sort by Type", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (answer != JOptionPane.OK_OPTION) {
+            return;
+        }
+        final int moved = handler.getTileset().sortIntoCategoryFolders();
+        tileSelector.updateLayout();
+        repaint();
+        JOptionPane.showMessageDialog(this, moved + " tiles were filed by type.",
+                "Sort by Type", JOptionPane.INFORMATION_MESSAGE);
+    }
+
     private void jbImportTilesActionPerformed(ActionEvent evt) {
         final SystemFileChooser fc = new SystemFileChooser();
         if (handler.getLastTilesetDirectoryUsed() != null) {
@@ -1207,7 +1222,15 @@ public class TilesetEditorDialog extends JDialog {
                 if (dialog.getReturnValue() == ImportTilesDialog.APPROVE_OPTION) {
                     ArrayList<Tile> tiles = dialog.getTilesSelected();
 
-                    handler.getTileset().importTiles(tiles);
+                    String sourceName = new File(path).getName();
+                    if (sourceName.toLowerCase().endsWith("." + Tileset.fileExtension)) {
+                        sourceName = sourceName.substring(0, sourceName.length() - Tileset.fileExtension.length() - 1);
+                    }
+                    int skipped = handler.getTileset().importTilesSkippingDuplicates(tiles, sourceName);
+                    if (skipped > 0) {
+                        JOptionPane.showMessageDialog(this, skipped + " of the selected tiles already exist in this tileset and were skipped.",
+                                "Import tiles", JOptionPane.INFORMATION_MESSAGE);
+                    }
 
                     handler.getTileset().removeUnusedTextures();
 
@@ -2005,6 +2028,7 @@ public class TilesetEditorDialog extends JDialog {
         jbRemoveTile = new JButton();
         jbDuplicateTile = new JButton();
         jbImportTiles = new JButton();
+        jbSortByType = new JButton();
         jPanel5 = new JPanel();
         panel2 = new JPanel();
         jLabel1 = new JLabel();
@@ -2554,6 +2578,7 @@ public class TilesetEditorDialog extends JDialog {
                             "[grow,fill]" +
                                     "[grow,fill]" +
                                     "[129,grow,fill]" +
+                                    "[grow,fill]" +
                                     "[grow,fill]",
                             // rows
                             "[grow,fill]"));
@@ -2593,6 +2618,15 @@ public class TilesetEditorDialog extends JDialog {
                     jbImportTiles.setPreferredSize(null);
                     jbImportTiles.addActionListener(e -> jbImportTilesActionPerformed(e));
                     panel1.add(jbImportTiles, "cell 3 0");
+
+                    //---- jbSortByType ----
+                    jbSortByType.setText("Sort by Type");
+                    jbSortByType.setToolTipText("File the tiles in All Tiles and in import folders into folders by type (trees, paths, water, ...)");
+                    jbSortByType.setMaximumSize(null);
+                    jbSortByType.setMinimumSize(null);
+                    jbSortByType.setPreferredSize(null);
+                    jbSortByType.addActionListener(e -> jbSortByTypeActionPerformed(e));
+                    panel1.add(jbSortByType, "cell 4 0");
                 }
                 jPanel1.add(panel1, "cell 0 1,gapx 5 5,gapy 5 5");
 
@@ -3812,6 +3846,7 @@ public class TilesetEditorDialog extends JDialog {
     private JButton jbRemoveTile;
     private JButton jbDuplicateTile;
     private JButton jbImportTiles;
+    private JButton jbSortByType;
     private JPanel jPanel5;
     private JPanel panel2;
     private JLabel jLabel1;

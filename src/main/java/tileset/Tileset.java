@@ -411,16 +411,204 @@ public class Tileset {
         ArrayList<Integer> texIDs = tile.getTextureIDs();
         for (int i = 0; i < texIDs.size(); i++) {
             TilesetMaterial material = tile.getTileset().getMaterial(texIDs.get(i));
-            int index = materials.indexOf(material);
-            if (index == -1) {
-                texIDs.set(i, materials.size());
-                materials.add(material);
-            } else {
-                texIDs.set(i, index);
-            }
+            texIDs.set(i, importMaterial(material));
         }
         tile.setTileset(this);
         tiles.add(tile);
+    }
+
+    /**
+     * Index of the material an imported tile should use for {@code material}.
+     * An existing material with the same image name is reused only if it shows
+     * the same pixels. Different tilesets use the same file name (for example
+     * "file1Material.png") for different images, so a clash gets a renamed copy
+     * ("file1Material_2.png"), which later imports of that image reuse.
+     */
+    private int importMaterial(TilesetMaterial material) {
+        String name = material.getImageName();
+        int index = getIndexOfMaterialByImgName(name);
+        if (index == -1) {
+            materials.add(material);
+            return materials.size() - 1;
+        }
+        if (materials.get(index).samePixels(material)) {
+            return index;
+        }
+        String base = Utils.removeExtensionFromPath(name);
+        String ext = name.substring(base.length());
+        for (int n = 2; ; n++) {
+            String candidate = base + "_" + n + ext;
+            int existing = getIndexOfMaterialByImgName(candidate);
+            if (existing != -1) {
+                if (materials.get(existing).samePixels(material)) {
+                    return existing;
+                }
+                continue;
+            }
+            String suffix = "_" + n;
+            String textureNameImd = uniqueImdName(material.getTextureNameImd(), suffix, true);
+            String paletteNameImd = uniqueImdName(material.getPaletteNameImd(), suffix, false);
+            TilesetMaterial renamed = material.clone();
+            renamed.setImageName(candidate);
+            renamed.setMaterialName(material.getMaterialName() == null ? null : material.getMaterialName() + suffix);
+            renamed.setTextureNameImd(textureNameImd);
+            renamed.setPaletteNameImd(paletteNameImd);
+            materials.add(renamed);
+            return materials.size() - 1;
+        }
+    }
+
+    /** Max length of texture and palette names in NSBTX files. */
+    private static final int IMD_NAME_MAX = 16;
+
+    /**
+     * {@code name + suffix}, shortened to fit {@link #IMD_NAME_MAX} and made
+     * unique among this tileset's texture (or palette) names, so the IMD export
+     * does not merge the renamed texture with the original.
+     */
+    private String uniqueImdName(String name, String suffix, boolean texture) {
+        if (name == null) {
+            return null;
+        }
+        java.util.Set<String> used = new java.util.HashSet<>();
+        for (TilesetMaterial m : materials) {
+            used.add(texture ? m.getTextureNameImd() : m.getPaletteNameImd());
+        }
+        // palette names are usually "<texture>_pl": keep the "_pl" at the end
+        String head = name;
+        String tail = "";
+        if (!texture && name.endsWith("_pl")) {
+            head = name.substring(0, name.length() - 3);
+            tail = "_pl";
+        }
+        for (int n = 0; ; n++) {
+            String s = n == 0 ? suffix : suffix + "_" + n;
+            String end = s + tail;
+            String start = head.length() + end.length() > IMD_NAME_MAX
+                    ? head.substring(0, Math.max(0, IMD_NAME_MAX - end.length())) : head;
+            String candidate = start + end;
+            if (!used.contains(candidate)) {
+                return candidate;
+            }
+        }
+    }
+
+    /** Folders made by importing tiles are named like this; the sort by type empties them. */
+    public static final String IMPORT_FOLDER_PREFIX = "Imported from ";
+
+    /**
+     * Imports tiles and files them under a palette folder, so tiles taken from
+     * different source tilesets stay apart in the tile selector. Tile indices
+     * and everything else about the tileset are unaffected.
+     */
+    public void importTiles(ArrayList<Tile> tiles, String folderName) {
+        String path = folderPathFromName(folderName);
+        if (!path.isEmpty()) {
+            path = IMPORT_FOLDER_PREFIX + path;
+        }
+        importTiles(tiles);
+        if (path.isEmpty()) {
+            return;
+        }
+        PaletteFolder folder = getPaletteFolder(path);
+        if (folder == null) {
+            folder = getOrCreatePaletteFolder(path);
+            folder.setRows(1);
+        }
+        for (Tile tile : tiles) {
+            tile.setPaletteSlot(-1);
+            tile.setPaletteFolder(path);
+        }
+    }
+
+    /**
+     * Like {@link #importTiles(ArrayList, String)}, but skips tiles that already
+     * exist in this tileset (same model, see {@link Tile#modelKey()}), including
+     * repeats inside the imported batch. The existing tile keeps its folder and
+     * its collision defaults.
+     *
+     * @return the number of tiles skipped
+     */
+    public int importTilesSkippingDuplicates(ArrayList<Tile> tiles, String folderName) {
+        java.util.HashSet<String> known = new java.util.HashSet<>();
+        for (Tile tile : this.tiles) {
+            known.add(tile.modelKey());
+        }
+        ArrayList<Tile> fresh = new ArrayList<>();
+        for (Tile tile : tiles) {
+            if (known.add(tile.modelKey())) { // keys are taken before importTile re-points the textures
+                fresh.add(tile);
+            }
+        }
+        importTiles(fresh, folderName);
+        return tiles.size() - fresh.size();
+    }
+
+    /**
+     * Files tiles into palette folders by what they are (see {@link TileCategories}).
+     * Only tiles that are in "All Tiles" or in a folder made by an import are
+     * moved, so tiles you filed by hand stay where they are. Import folders this
+     * empties are removed.
+     *
+     * @return the number of tiles moved
+     */
+    public int sortIntoCategoryFolders() {
+        return sortIntoCategoryFolders(folder -> folder.isEmpty() || folder.startsWith(IMPORT_FOLDER_PREFIX));
+    }
+
+    /** Same, for tiles whose current folder path is accepted by {@code movable}. */
+    public int sortIntoCategoryFolders(java.util.function.Predicate<String> movable) {
+        java.util.Map<Tile, String> target = new java.util.LinkedHashMap<>();
+        java.util.LinkedHashSet<String> emptied = new java.util.LinkedHashSet<>();
+        java.util.Set<String> needed = new java.util.HashSet<>();
+        for (Tile tile : tiles) {
+            String current = tile.getPaletteFolder();
+            if (TileCategories.ORDER.contains(current) || !movable.test(current)) {
+                continue;
+            }
+            String category = TileCategories.categorize(tile);
+            target.put(tile, category);
+            needed.add(category);
+            if (!current.isEmpty()) {
+                emptied.add(current);
+            }
+        }
+        for (String category : TileCategories.ORDER) { // creation order is display order
+            if (needed.contains(category) && getPaletteFolder(category) == null) {
+                getOrCreatePaletteFolder(category).setRows(1);
+            }
+        }
+        for (java.util.Map.Entry<Tile, String> e : target.entrySet()) {
+            e.getKey().setPaletteSlot(-1);
+            e.getKey().setPaletteFolder(e.getValue());
+        }
+        for (String path : emptied) {
+            PaletteFolder folder = getPaletteFolder(path);
+            if (folder != null && !hasTilesInFolder(path)) {
+                removePaletteFolder(folder);
+            }
+        }
+        return target.size();
+    }
+
+    private boolean hasTilesInFolder(String path) {
+        String prefix = path + "/";
+        for (Tile tile : tiles) {
+            for (String folder : tile.getPaletteFolderSlots().keySet()) {
+                if (folder.equals(path) || folder.startsWith(prefix)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Folder path for a display name: no "/" (it separates nested folders). */
+    public static String folderPathFromName(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.replace('/', '-').replace('_', ' ').trim();
     }
 
     public void importTiles(ArrayList<Tile> tiles) {

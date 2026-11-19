@@ -24,6 +24,18 @@ public final class ConverterLocator {
         return Paths.get("converter", EXECUTABLE).toAbsolutePath().normalize().toString();
     }
 
+    /**
+     * Path of a file as the converter must receive it. On Windows the plain path; under Wine the
+     * absolute path on Wine's Z: drive (the whole Unix file system), so it works from any working
+     * directory. (A relative path only works when the file is below the working directory.)
+     */
+    public static String toConverterPath(String path) {
+        if (System.getProperty("os.name").toLowerCase().startsWith("windows")) {
+            return path;
+        }
+        return "Z:" + Paths.get(path).toAbsolutePath().normalize().toString().replace('/', '\\');
+    }
+
     private static LinkedHashSet<Path> getCandidates() {
         LinkedHashSet<Path> candidates = new LinkedHashSet<>();
         addCandidateAndAncestors(candidates, Paths.get(System.getProperty("user.dir", ".")));

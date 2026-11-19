@@ -75,6 +75,11 @@ public class MainFrame extends JFrame {
     private JLabel jlCursorCoords;
 
     public static void main(String[] args) {
+        // MigLayout scales sizes by "screen DPI now / DPI when first used". On macOS the main display's DPI
+        // changes with the display setup (external monitor plugged in or out), which squeezed or overlapped
+        // panels while the editor ran. Plain pixels keep the layout stable.
+        net.miginfocom.layout.PlatformDefaults.setLogicalPixelBase(net.miginfocom.layout.PlatformDefaults.BASE_REAL_PIXEL);
+        utils.swing.ScrollPaneIncrements.install();
         try {
             String theme = prefs.get("Theme", "Native");
             switch (theme) {
@@ -127,6 +132,97 @@ public class MainFrame extends JFrame {
                 }
             }
         });
+    }
+
+    /**
+     * Thin drag strip next to the tile list. Dragging changes how many tiles fit in a row; the list
+     * snaps to whole tile columns. direction -1: strip on the left (drag left to widen), 1: on the right.
+     */
+    private class TileListResizeHandle extends JPanel {
+        private static final int MIN_COLUMNS = 4;
+        private static final int MAX_COLUMNS = 24;
+        private final int direction;
+        private int pressScreenX;
+        private int pressColumns;
+
+        TileListResizeHandle(int direction) {
+            this.direction = direction;
+            Dimension size = new Dimension(6, 0);
+            setPreferredSize(size);
+            setMinimumSize(size);
+            setMaximumSize(new Dimension(6, Short.MAX_VALUE));
+            setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR));
+            setToolTipText("Drag to resize the tile list");
+            MouseAdapter drag = new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    pressScreenX = e.getXOnScreen();
+                    pressColumns = tileSelector.getColumns();
+                }
+
+                @Override
+                public void mouseDragged(MouseEvent e) {
+                    int delta = (e.getXOnScreen() - pressScreenX) * TileListResizeHandle.this.direction;
+                    int columns = pressColumns + Math.round(delta / 16f);
+                    columns = Math.max(MIN_COLUMNS, Math.min(MAX_COLUMNS, columns));
+                    if (columns != tileSelector.getColumns()) {
+                        tileSelector.setColumns(columns);
+                        jpMainWindow.revalidate();
+                        jpMainWindow.repaint();
+                    }
+                }
+            };
+            addMouseListener(drag);
+            addMouseMotionListener(drag);
+        }
+    }
+
+    /**
+     * One drag strip between the tile list and the smart drawing panel. Dragging trades width between them:
+     * right gives the tile list more tile columns (16 px each) and the smart drawing panel fewer grids per row
+     * (80 px each), left does the opposite.
+     */
+    private class PanelSplitHandle extends JPanel {
+        private int pressScreenX;
+        private int pressTileWidth;
+        private int pressSmartWidth;
+
+        PanelSplitHandle() {
+            Dimension size = new Dimension(6, 0);
+            setPreferredSize(size);
+            setMinimumSize(size);
+            setMaximumSize(new Dimension(6, Short.MAX_VALUE));
+            setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR));
+            setToolTipText("Drag to trade width between the tile list and the smart drawings");
+            MouseAdapter drag = new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    pressScreenX = e.getXOnScreen();
+                    pressTileWidth = tileSelector.getColumns() * 16;
+                    pressSmartWidth = smartGridDisplay.getColumns() * smartGridWidth();
+                }
+
+                @Override
+                public void mouseDragged(MouseEvent e) {
+                    int delta = e.getXOnScreen() - pressScreenX;
+                    int tileColumns = Math.max(4, Math.min(24, Math.round((pressTileWidth + delta) / 16f)));
+                    int smartColumns = Math.max(1, Math.min(6,
+                            Math.round((pressSmartWidth - delta) / (float) smartGridWidth())));
+                    if (tileColumns != tileSelector.getColumns() || smartColumns != smartGridDisplay.getColumns()) {
+                        tileSelector.setColumns(tileColumns);
+                        smartGridDisplay.setColumns(smartColumns);
+                        jpMainWindow.revalidate();
+                        jpMainWindow.repaint();
+                    }
+                }
+            };
+            addMouseListener(drag);
+            addMouseMotionListener(drag);
+        }
+
+        private int smartGridWidth() {
+            return SmartGrid.width * editor.grid.MapGrid.tileSize;
+        }
     }
 
     public MainFrame() {
@@ -2636,12 +2732,8 @@ public class MainFrame extends JFrame {
                 jpMainWindow.setLayout(new MigLayout(
                         "hidemode 3",
                         // columns
-                        "[fill]" +
-                                "[fill]" +
-                                "[grow,fill]" +
-                                "[fill]" +
-                                "[fill]" +
-                                "[fill]",
+                        // columns 4-7 (tile list strip, tile list, shared strip, smart drawing) touch each other
+                        "[fill][fill][grow,fill][fill][fill]0[fill]0[fill]0[fill]",
                         // rows
                         "[grow,fill]"));
 
@@ -2793,7 +2885,9 @@ public class MainFrame extends JFrame {
                                             .addGap(0, 0, 0))
                     );
                 }
-                jpMainWindow.add(jpTileList, "cell 4 0");
+                jpMainWindow.add(new TileListResizeHandle(-1), "cell 4 0");
+                jpMainWindow.add(jpTileList, "cell 5 0");
+                jpMainWindow.add(new PanelSplitHandle(), "cell 6 0");
 
                 //======== jpSmartDrawing ========
                 {
@@ -2834,7 +2928,7 @@ public class MainFrame extends JFrame {
                                     .addComponent(jscSmartDrawing, GroupLayout.DEFAULT_SIZE, 0, Short.MAX_VALUE)
                     );
                 }
-                jpMainWindow.add(jpSmartDrawing, "cell 5 0");
+                jpMainWindow.add(jpSmartDrawing, "cell 7 0");
 
                 //======== jpButtons ========
                 {
