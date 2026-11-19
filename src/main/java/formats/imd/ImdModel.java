@@ -245,6 +245,7 @@ public class ImdModel extends ImdNode {
         //Material array
         ImdNode materialArray = new ImdNode("material_array");
         materialArray.attributes.add(new ImdAttribute("size", materials.size()));
+        String[] materialNames = uniqueMaterialNames(materials);
         for (int i = 0; i < materials.size(); i++) { //
             TilesetMaterial current = materials.get(i);
 
@@ -261,7 +262,7 @@ public class ImdModel extends ImdNode {
             //}
             ImdMaterial material = new ImdMaterial(
                     i,
-                    current.getMaterialName(),
+                    materialNames[i],
                     new boolean[] { current.getLight0(), current.getLight1(), current.getLight2(), current.getLight3() },
                     new int[][] { current.getDiffuse(), current.getAmbient(), current.getSpecular(), current.getEmission() },
                     current.getAlpha(),
@@ -742,6 +743,25 @@ public class ImdModel extends ImdNode {
         }
         parent.appendChild(e);
 
+    }
+
+    /**
+     * Material names for the IMD. Different materials can share a name (tilesets merged from
+     * several sources keep the original names), but g3dcvtr rejects an IMD with two materials of
+     * the same name ("Duplicate resource Name"). A repeated name gets a suffix: beach, beach_2, ...
+     */
+    static String[] uniqueMaterialNames(java.util.List<TilesetMaterial> materials) {
+        String[] names = new String[materials.size()];
+        java.util.Set<String> used = new java.util.HashSet<>();
+        for (int i = 0; i < names.length; i++) {
+            String base = materials.get(i).getMaterialName();
+            String name = base;
+            for (int n = 2; !used.add(name); n++) {
+                name = base + "_" + n;
+            }
+            names[i] = name;
+        }
+        return names;
     }
 
     private float[] getMinCoords() {
