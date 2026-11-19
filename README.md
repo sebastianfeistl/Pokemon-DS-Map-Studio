@@ -41,10 +41,22 @@ On macOS, use `./start-macos.sh` instead. It rebuilds the jar when the sources h
 starts the editor. It needs `libs-macos/jogamp-fat-2.6.0.jar` (jogamp-fat.jar 2.6.0 from jogamp.org),
 which fixes a crash of the 3D view on recent macOS versions.
 
+## Exporting .nsbmd and .nsbtx files
+
+Painting, saving and the IMD, OBJ and collision exports work without anything else. Converting to the
+game's `.nsbmd`/`.nsbtx` formats needs Nintendo's converter:
+
+1. Put your own legally obtained `g3dcvtr.exe` in the `converter` folder. It can't be distributed here.
+2. On macOS and Linux, install Wine, which runs the converter:
+   - macOS: `brew install --cask wine-stable` (Homebrew), or the Wine app from winehq.org. The start
+     script finds Wine in `/Applications` and in Homebrew's folders.
+   - Linux: your distribution's `wine` package.
+
+   Check with `wine --version` in a terminal, then restart the editor. If Wine is missing, the export
+   says so.
+
 ## Notes
 
-- To export `.nsbmd` files, put your own legally obtained `g3dcvtr.exe` in the `converter` folder. It
-  can't be distributed here. On macOS and Linux it runs through Wine.
 - Map files saved with this version may not open in older versions of the editor (the extra 3D layer
   and export groups add new data to `.pdsmap` files).
 

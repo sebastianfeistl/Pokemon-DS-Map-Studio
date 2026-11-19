@@ -506,8 +506,7 @@ final class MapExportActions {
                             }
                         } catch (IOException ex) {
                             JOptionPane.showMessageDialog(frame,
-                                    "The program \"g3dcvtr.exe\" is not found in the \"converter\" folder.\n"
-                                            + "Put the program and its *.dll files in the folder and try again.",
+                                    ConverterLocator.converterNotFoundMessage(),
                                     "Converter not found", JOptionPane.ERROR_MESSAGE);
                         } catch (InterruptedException ex) {
                             JOptionPane.showMessageDialog(frame, "The model was not converted",
@@ -609,8 +608,7 @@ final class MapExportActions {
                     }
                 } catch (IOException ex) {
                     JOptionPane.showMessageDialog(frame,
-                            "The program \"g3dcvtr.exe\" is not found in the \"converter\" folder.\n"
-                                    + "Put the program and its *.dll files in the folder and try again.",
+                            ConverterLocator.converterNotFoundMessage(),
                             "Converter not found", JOptionPane.ERROR_MESSAGE);
                 } catch (InterruptedException ex) {
                     JOptionPane.showMessageDialog(frame, "The model was not converted",

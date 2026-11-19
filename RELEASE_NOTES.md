@@ -20,6 +20,7 @@ Linux it runs through Wine.
   graphics pipeline produced when drawing many small images.
 - Editor background screenshots are captured at full resolution on Retina screens.
 - `.nsbmd` and `.nsbtx` export through Wine works from any folder.
+- If Wine is missing, the export now says so (instead of claiming that g3dcvtr.exe is missing).
 
 ### Tiles and tilesets
 - Tiles can be sorted into folders by type.

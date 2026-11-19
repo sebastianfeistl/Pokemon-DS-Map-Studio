@@ -532,8 +532,7 @@ public class NsbmdOutputInfoDialog extends javax.swing.JDialog {
                         nFilesNotConverted++;
                         exportStatus = ConvertStatus.CONVERTER_NOT_FOUND_STATUS;
                         errorMsgs.set(nFilesProcessed,
-                                "The program \"g3dcvtr.exe\" is not found in the \"converter\" folder.\n"
-                                        + "Put the program and its *.dll files in the folder and try again.");
+                                ConverterLocator.converterNotFoundMessage());
                     } catch (InterruptedException ex) {
                         nFilesNotConverted++;
                         exportStatus = ConvertStatus.INTERRUPT_ERROR_STATUS;
