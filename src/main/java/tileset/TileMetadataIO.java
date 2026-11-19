@@ -43,8 +43,9 @@ public class TileMetadataIO {
     public static void write(String tilesetPath, Tileset tset) throws IOException {
         File file = new File(getMetadataPath(tilesetPath));
         if (!hasContent(tset)) {
-            if (file.exists()) {
-                file.delete();
+            //A stale sidecar that stays would be read back on the next load
+            if (!file.delete() && file.exists()) {
+                throw new IOException("Could not delete the old metadata file " + file);
             }
             return;
         }
