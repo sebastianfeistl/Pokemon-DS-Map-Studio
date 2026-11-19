@@ -37,9 +37,10 @@ public class TileMetadataIO {
 
     /**
      * Writes the sidecar next to the tileset file. When the tileset has no
-     * metadata at all, an existing sidecar is deleted instead.
+     * metadata at all, an existing sidecar is deleted instead. Write errors
+     * are passed on so a save never reports success without its metadata.
      */
-    public static void write(String tilesetPath, Tileset tset) {
+    public static void write(String tilesetPath, Tileset tset) throws IOException {
         File file = new File(getMetadataPath(tilesetPath));
         if (!hasContent(tset)) {
             if (file.exists()) {
@@ -47,11 +48,7 @@ public class TileMetadataIO {
             }
             return;
         }
-        try {
-            writeFile(file.getPath(), tset);
-        } catch (IOException ex) {
-            System.err.println("Could not save tile metadata: " + ex.getMessage());
-        }
+        writeFile(file.getPath(), tset);
     }
 
     /** Writes a standalone metadata file chosen by the user. */

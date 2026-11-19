@@ -159,6 +159,8 @@ public class MapDisplay extends GLJPanel implements GLEventListener, MouseListen
     //Mouse events
     protected int lastMouseX, lastMouseY;
     protected int xMouse, yMouse;
+    //Cell under the mouse at the last repaint caused by a mouse move; null forces the next one
+    protected Point lastHoverCell = null;
     protected Point dragStart = new Point();
     protected Set<Point> editedMapCoords = new HashSet<>();
 
@@ -455,6 +457,7 @@ public class MapDisplay extends GLJPanel implements GLEventListener, MouseListen
     @Override
     public void mouseReleased(MouseEvent e) {
         viewMode.mouseReleased(this, e);
+        lastHoverCell = null;
     }
 
     @Override
@@ -464,7 +467,7 @@ public class MapDisplay extends GLJPanel implements GLEventListener, MouseListen
 
     @Override
     public void mouseExited(MouseEvent e) {
-
+        lastHoverCell = null;
     }
 
     @Override
@@ -488,6 +491,7 @@ public class MapDisplay extends GLJPanel implements GLEventListener, MouseListen
 
     @Override
     public void keyPressed(KeyEvent e) {
+        lastHoverCell = null;
         viewMode.keyPressed(this, e);
 
         switch (e.getKeyCode()) {
@@ -623,6 +627,7 @@ public class MapDisplay extends GLJPanel implements GLEventListener, MouseListen
 
     @Override
     public void keyReleased(KeyEvent e) {
+        lastHoverCell = null;
         if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
             SHIFT_PRESSED = false;
             //disableCameraMove();

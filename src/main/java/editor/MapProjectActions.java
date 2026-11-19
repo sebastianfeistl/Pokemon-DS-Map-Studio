@@ -464,8 +464,10 @@ final class MapProjectActions {
                 handler.getMapMatrix().saveBuildings(entrySet);
 
                 saveMapThumbnail();
-            } catch (ParserConfigurationException | TransformerException | IOException ex) {
-                JOptionPane.showMessageDialog(frame, "There was a problem saving all the map files",
+            } catch (Exception ex) {
+                //Any failure, not only IO, must reach the user: the save may be incomplete
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(frame, "There was a problem saving all the map files:\n" + ex,
                         "Error saving map files", JOptionPane.ERROR_MESSAGE);
             } finally {
                 busyRunner.setGUIBlock(false);
@@ -509,8 +511,10 @@ final class MapProjectActions {
                     handler.getMapMatrix().saveBuildings(entrySet);
 
                     recentMapsMenu.addAndPersist(Utils.addExtensionToPath(path, MapMatrix.fileExtension));
-                } catch (ParserConfigurationException | TransformerException | IOException ex) {
-                    JOptionPane.showMessageDialog(frame, "There was a problem saving all the map files",
+                } catch (Exception ex) {
+                    //Any failure, not only IO, must reach the user: the save may be incomplete
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(frame, "There was a problem saving all the map files:\n" + ex,
                             "Error saving map files", JOptionPane.ERROR_MESSAGE);
                 } finally {
                     busyTask.finish();

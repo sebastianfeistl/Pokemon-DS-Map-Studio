@@ -4,14 +4,21 @@ package tileset;
 import editor.MainFrame;
 import editor.smartdrawing.SmartGrid;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -88,8 +95,27 @@ public class TilesetIO {
     public static void writeTilesetToFile(String path, Tileset tset)
             throws FileNotFoundException, IOException {
 
-        FileOutputStream out = new FileOutputStream(path);
+        //Write to a temporary file first so a failed save never leaves a truncated tileset
+        File target = new File(path);
+        File temp = new File(path + ".tmp");
+        try (OutputStream out = new BufferedOutputStream(new FileOutputStream(temp))) {
+            writeTilesetData(out, tset);
+        } catch (IOException | RuntimeException ex) {
+            temp.delete();
+            throw ex;
+        }
+        try {
+            Files.move(temp.toPath(), target.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException ex) {
+            Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        }
 
+        //Palette folders / tile names / collision defaults sidecar
+        TileMetadataIO.write(path, tset);
+    }
+
+    private static void writeTilesetData(OutputStream out, Tileset tset) throws IOException {
         for (int i = 0; i < tset.getMaterials().size(); i++) {
             TilesetMaterial m = tset.getMaterials().get(i);
             writeIntElement(out, TAG_MATERIAL_START, i);
@@ -155,11 +181,6 @@ public class TilesetIO {
             writeIntElement(out, TAG_TOFFSETSTRI, tile.getTexOffsetsTri());
             writeStringElement(out, TAG_OBJNAME, tile.getObjFilename());
         }
-
-        out.close();
-
-        //Palette folders / tile names / collision defaults sidecar
-        TileMetadataIO.write(path, tset);
     }
 
     public static Tileset readTilesetFromFileAsResourceURI(String path)
@@ -182,7 +203,10 @@ public class TilesetIO {
     public static Tileset readTilesetFromFile(String path)
             throws FileNotFoundException, IOException, NullPointerException,
             TextureNotFoundException {
-        Tileset tset = readTilesetFromFile(new FileInputStream(path), path, false);
+        Tileset tset;
+        try (InputStream in = new BufferedInputStream(new FileInputStream(path))) {
+            tset = readTilesetFromFile(in, path, false);
+        }
         TileMetadataIO.read(path, tset);
         return tset;
     }
@@ -518,8 +542,8 @@ public class TilesetIO {
             throws IOException {
         int size = readInt(in);
         byte[] data = new byte[size];
-        in.read(data);
-        return new String(data);
+        in.readNBytes(data, 0, data.length);
+        return new String(data, StandardCharsets.UTF_8);
     }
 
     private static int[][] readIntMatrixElement(InputStream in) throws IOException {
@@ -551,13 +575,13 @@ public class TilesetIO {
 
     private static int readInt(InputStream in) throws IOException {
         byte[] data = new byte[Integer.BYTES];
-        in.read(data);
+        in.readNBytes(data, 0, data.length);
         return ByteBuffer.wrap(data).getInt();
     }
 
     private static float readFloat(InputStream in) throws IOException {
         byte[] data = new byte[Float.BYTES];
-        in.read(data);
+        in.readNBytes(data, 0, data.length);
         return ByteBuffer.wrap(data).getFloat();
     }
 
@@ -595,21 +619,23 @@ public class TilesetIO {
         return f;
     }
 
-    private static void writeStringElement(FileOutputStream out, byte tag, String data)
+    private static void writeStringElement(OutputStream out, byte tag, String data)
             throws IOException {
+        //The size is the number of bytes, which differs from length() for non-ASCII names
+        byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
         writeTag(out, tag);
-        writeIntValue(out, data.length());
-        writeString(out, data);
+        writeIntValue(out, bytes.length);
+        out.write(bytes);
     }
 
-    private static void writeIntElement(FileOutputStream out, byte tag, ArrayList<Integer> data)
+    private static void writeIntElement(OutputStream out, byte tag, ArrayList<Integer> data)
             throws IOException {
         writeTag(out, tag);
         writeIntValue(out, data.size());
         writeIntArray(out, Utils.intListToArray(data));
     }
 
-    private static void writeIntElement(FileOutputStream out, byte tag, int[][] data)
+    private static void writeIntElement(OutputStream out, byte tag, int[][] data)
             throws IOException {
         writeTag(out, tag);
         writeIntValue(out, data.length);
@@ -619,42 +645,42 @@ public class TilesetIO {
         }
     }
 
-    private static void writeFaceElement(FileOutputStream out, byte tag, ArrayList<Face> data)
+    private static void writeFaceElement(OutputStream out, byte tag, ArrayList<Face> data)
             throws IOException {
         writeTag(out, tag);
         writeIntValue(out, data.size());
         writeFaceArray(out, data);
     }
 
-    private static void writeFaceExtendedElement(FileOutputStream out, byte tag, ArrayList<Face> data)
+    private static void writeFaceExtendedElement(OutputStream out, byte tag, ArrayList<Face> data)
             throws IOException {
         writeTag(out, tag);
         writeIntValue(out, data.size());
         writeFaceExtendedArray(out, data);
     }
 
-    private static void writeFloatElement(FileOutputStream out, byte tag, ArrayList<Float> data)
+    private static void writeFloatElement(OutputStream out, byte tag, ArrayList<Float> data)
             throws IOException {
         writeTag(out, tag);
         writeIntValue(out, data.size());
         writeFloatArray(out, Utils.floatListToArray(data));
     }
 
-    private static void writeIntElement(FileOutputStream out, byte tag, int data)
+    private static void writeIntElement(OutputStream out, byte tag, int data)
             throws IOException {
         writeTag(out, tag);
         writeIntValue(out, 1);
         writeIntValue(out, data);
     }
 
-    private static void writeFloatElement(FileOutputStream out, byte tag, float data)
+    private static void writeFloatElement(OutputStream out, byte tag, float data)
             throws IOException {
         writeTag(out, tag);
         writeIntValue(out, 1);
         writeFloatValue(out, data);
     }
 
-    private static void writeByteArrayElement(FileOutputStream out, byte tag, byte[] data)
+    private static void writeByteArrayElement(OutputStream out, byte tag, byte[] data)
             throws IOException {
         writeTag(out, tag);
         writeIntValue(out, data.length);
@@ -665,33 +691,28 @@ public class TilesetIO {
     }
 
 
-    private static void writeBoolElement(FileOutputStream out, byte tag, boolean data)
+    private static void writeBoolElement(OutputStream out, byte tag, boolean data)
             throws IOException {
         writeTag(out, tag);
         writeIntValue(out, 1);
         writeIntValue(out, data ? 1 : 0);
     }
 
-    private static void writeString(FileOutputStream out, String s)
-            throws IOException {
-        out.write(s.getBytes());
-    }
-
-    private static void writeIntArray(FileOutputStream out, int[] data)
+    private static void writeIntArray(OutputStream out, int[] data)
             throws IOException {
         for (int i : data) {
             writeIntValue(out, i);
         }
     }
 
-    private static void writeFloatArray(FileOutputStream out, float[] data)
+    private static void writeFloatArray(OutputStream out, float[] data)
             throws IOException {
         for (float f : data) {
             writeFloatValue(out, f);
         }
     }
 
-    private static void writeFaceArray(FileOutputStream out, ArrayList<Face> data)
+    private static void writeFaceArray(OutputStream out, ArrayList<Face> data)
             throws IOException {
         for (Face f : data) {
             writeIntArray(out, f.vInd);
@@ -700,7 +721,7 @@ public class TilesetIO {
         }
     }
 
-    private static void writeFaceExtendedArray(FileOutputStream out, ArrayList<Face> data)
+    private static void writeFaceExtendedArray(OutputStream out, ArrayList<Face> data)
             throws IOException {
         for (Face f : data) {
             writeIntArray(out, f.vInd);
@@ -710,7 +731,7 @@ public class TilesetIO {
         }
     }
 
-    private static void writeIntValue(FileOutputStream out, int value)
+    private static void writeIntValue(OutputStream out, int value)
             throws IOException {
         out.write((value >>> 24) & 0xFF);
         out.write((value >>> 16) & 0xFF);
@@ -718,17 +739,17 @@ public class TilesetIO {
         out.write(value & 0xFF);
     }
 
-    private static void writeFloatValue(FileOutputStream out, float value)
+    private static void writeFloatValue(OutputStream out, float value)
             throws IOException {
         writeIntValue(out, Float.floatToRawIntBits(value));
     }
 
-    private static void writeByteValue(FileOutputStream out, byte value)
+    private static void writeByteValue(OutputStream out, byte value)
             throws IOException {
         out.write(value);
     }
 
-    private static void writeTag(FileOutputStream out, byte tag)
+    private static void writeTag(OutputStream out, byte tag)
             throws IOException {
         out.write(tag);
     }
