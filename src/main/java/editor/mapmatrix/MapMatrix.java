@@ -40,6 +40,7 @@ import java.io.PrintWriter;
 import java.nio.FloatBuffer;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import tileset.TextureNotFoundException;
 import tileset.Tile;
@@ -959,10 +960,6 @@ public class MapMatrix {
         }
     }
 
-    public void removeAllUnusedMapFiles() {
-        removeAllUnusedMapFiles(new File(filePath).getParent(), new File(filePath).getName(), matrix);
-    }
-
     /**
      * Deletes the per-map files of the map mapFileName in folderPath whose
      * coords don't belong to any map of layout (coords in the file names are
@@ -986,16 +983,19 @@ public class MapMatrix {
 
     private void removeUnusedMapFiles(String folderPath, String mapName, HashMap<Point, MapData> layout, String fileExtension) {
         Point minCoords = getMinCoords(layout);
+        //Per-map files are named mapName + "_XX_YY" (second collision files: mapName + "2_XX_YY").
+        //Other maps whose names start with mapName (e.g. "route_north", "route2") and the
+        //map's own files (e.g. a whole map export named "route_1_2.imd") don't match.
+        String suffix = fileExtension.equals(Collisions.fileExtension) ? "2?" : "";
+        Pattern perMapName = Pattern.compile(Pattern.quote(mapName) + suffix + "_\\d+_\\d+\\."
+                + Pattern.quote(fileExtension));
 
         if (folderPath != null) {
             File folder = new File(folderPath);
             File[] filesToRemove = folder.listFiles(new FilenameFilter() {
                 @Override
                 public boolean accept(File dir, String name) {
-                    //Per-map files are named mapName + suffix + "_XX_YY"; the map's own files (e.g. a
-                    //whole map export named "route_1_2.imd") have nothing after the map name
-                    return name.startsWith(mapName)
-                            && Utils.removeExtensionFromPath(name).length() > mapName.length()
+                    return perMapName.matcher(name).matches()
                             && canRemoveMapFile(name, fileExtension, layout, minCoords);
                 }
             });
