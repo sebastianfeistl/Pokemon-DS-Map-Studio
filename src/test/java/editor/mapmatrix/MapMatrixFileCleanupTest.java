@@ -44,6 +44,33 @@ class MapMatrixFileCleanupTest {
     }
 
     @Test
+    void saveKeepsFilesOfOtherMapsWhoseNamesStartWithTheMapName() throws Exception {
+        MapEditorHandler handler = new MapEditorHandler(null);
+        MapMatrix mapMatrix = handler.getMapMatrix();
+        mapMatrix.getMatrix().clear();
+        mapMatrix.getMatrix().put(new Point(0, 0), new MapData(handler));
+
+        File dir = tempDir.resolve("project").toFile();
+        assertTrue(dir.mkdirs());
+        String path = new File(dir, "route.pdsmap").getPath();
+        mapMatrix.filePath = path;
+
+        File stale = file(dir, "route_05_05.imd");
+        File staleCollisions2 = file(dir, "route2_05_05." + Collisions.fileExtension);
+        File usedCollisions2 = file(dir, "route2_00_00." + Collisions.fileExtension);
+        File northMap = file(dir, "route_north_00_01.imd");
+        File route2Map = file(dir, "route2_03_00.imd");
+
+        mapMatrix.saveGridsToFile(path, mapMatrix.getMatrix().entrySet());
+
+        assertFalse(stale.exists());
+        assertFalse(staleCollisions2.exists(), "stale second collision files must be deleted");
+        assertTrue(usedCollisions2.exists());
+        assertTrue(northMap.exists(), "files of map route_north must be kept");
+        assertTrue(route2Map.exists(), "files of map route2 must be kept");
+    }
+
+    @Test
     void saveAsCleansTheNewFolderAndLeavesTheOldOne() throws Exception {
         MapEditorHandler handler = new MapEditorHandler(null);
         MapMatrix mapMatrix = handler.getMapMatrix();
