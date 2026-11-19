@@ -600,13 +600,13 @@ public class ImdModel extends ImdNode {
     }
 
     private static int countNumberOfStarts(File file, String content) throws IOException {
-        InputStream input = new FileInputStream(file);
-        BufferedReader br = new BufferedReader(new InputStreamReader(input));
         int count = 0;
-        String line;
-        while ((line = br.readLine()) != null) {
-            if (line.startsWith(content)) {
-                count++;
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file)))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.startsWith(content)) {
+                    count++;
+                }
             }
         }
         return count;

@@ -703,17 +703,17 @@ public class Tile {
     }
 
     private static int countNumberOfStarts(File file, String content) throws IOException {
-        InputStream input = new FileInputStream(file);
-        BufferedReader br = new BufferedReader(new InputStreamReader(input));
         ArrayList<String> matLines = new ArrayList<>();
         //int count = 0;
-        String line;
-        while ((line = br.readLine()) != null) {
-            if (line.startsWith(content)) {
-                if (!matLines.contains(line)) {
-                    matLines.add(line);
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file)))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.startsWith(content)) {
+                    if (!matLines.contains(line)) {
+                        matLines.add(line);
+                    }
+                    //count++;
                 }
-                //count++;
             }
         }
         return matLines.size();
