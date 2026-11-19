@@ -476,7 +476,12 @@ public class ViewOrthoMode extends ViewMode {
         if (d.editMode == MapDisplay.EditMode.MODE_SELECT && !d.isPasting()) {
             d.updateSelectModeCursor(e);
         }
-        d.repaint();
+        //Every overlay snaps to cells, so re-render (the whole GL scene) only when the hovered cell changes
+        Point cell = new Point(Math.floorDiv(d.xMouse, d.tileSize), Math.floorDiv(d.yMouse, d.tileSize));
+        if (!cell.equals(d.lastHoverCell)) {
+            d.lastHoverCell = cell;
+            d.repaint();
+        }
     }
 
     @Override
