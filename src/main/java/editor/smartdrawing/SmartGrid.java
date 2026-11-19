@@ -451,7 +451,9 @@ public class SmartGrid {
 
     private int indexOfSameCorner(List<SmartUnit> units, SmartUnit unit) {
         for (int i = 0; i < units.size(); i++) {
-            if (units.get(i).sameCorners(unit)) {
+            // Only units with all four sides connected (centre, inner corners): an outer corner
+            // has no diagonal neighbours either, so a "+" junction would otherwise match it.
+            if (units.get(i).fullCrossNeighbours() && units.get(i).sameCorners(unit)) {
                 return i;
             }
         }
