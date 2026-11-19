@@ -4,10 +4,12 @@
 #
 # Needs libs-macos/jogamp-fat-2.6.0.jar (its 3D library fixes the macOS 26+ crash and must come first on
 # the classpath, before the older copy bundled in the app jar). Wine is put on PATH for g3dcvtr.exe
-# (converter/, not in git). The editor runs in .run/ so export temp files stay out of the source tree.
+# (converter/, not in git); an optional start-macos.local can point to another Wine. The editor runs in
+# .run/ so export temp files stay out of the source tree.
 cd "$(dirname "$0")" || exit 1
 ROOT=$(pwd)
-JAR="$ROOT/build/libs/Pokemon DS Map Studio-2.4.jar"
+VERSION=$(sed -n "s/^version '\(.*\)'$/\1/p" build.gradle)
+JAR="$ROOT/build/libs/Pokemon DS Map Studio-$VERSION.jar"
 JOGAMP="$ROOT/libs-macos/jogamp-fat-2.6.0.jar"
 
 if [ ! -f "$JOGAMP" ]; then
@@ -31,14 +33,9 @@ fi
 for p in "/Applications/Wine Stable.app/Contents/Resources/wine/bin" "/Applications/Wine Devel.app/Contents/Resources/wine/bin" "/Applications/Wine Staging.app/Contents/Resources/wine/bin"; do
     [ -d "$p" ] && PATH="$p:$PATH"
 done
-# The pokeplatinum mod repo keeps its own Wine (tools/mod/mac_setup.sh); prefer it when present.
-MOD_REPO="${PDSMS_MOD_REPO:-$ROOT/../pokeplatinum}"
-MOD_WINE="$MOD_REPO/.wine-app/Wine Stable.app/Contents/Resources/wine/bin"
-if [ -d "$MOD_WINE" ]; then
-    PATH="$MOD_WINE:$PATH"
-    export WINEPREFIX="${WINEPREFIX:-$MOD_REPO/.wine-mod}"
-    export WINEDEBUG="${WINEDEBUG:--all}"
-fi
+# Optional local settings (not in git), e.g. a Wine of your own:
+#   PATH="/path/to/wine/bin:$PATH"; export WINEPREFIX=/path/to/prefix
+[ -f "$ROOT/start-macos.local" ] && . "$ROOT/start-macos.local"
 export PATH
 mkdir -p "$ROOT/.run" && cd "$ROOT/.run" || exit 1
 exec java --enable-native-access=ALL-UNNAMED -cp "$JOGAMP:$JAR" editor.MainFrame "$@"
