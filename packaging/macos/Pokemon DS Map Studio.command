@@ -24,4 +24,4 @@ MAJOR=$("$JAVA" -version 2>&1 | sed -n 's/.*version "\([0-9]*\).*/\1/p' | head -
 OPTS=""
 [ "${MAJOR:-0}" -ge 22 ] && OPTS="--enable-native-access=ALL-UNNAMED"
 
-exec "$JAVA" $OPTS -cp "$APP_DIR/lib/jogamp-fat-2.6.0.jar:$APP_DIR/Pokemon DS Map Studio.jar" editor.MainFrame "$@"
+exec "$JAVA" $OPTS -Xdock:name="Pokemon DS Map Studio" -Dapple.awt.application.name="Pokemon DS Map Studio" -cp "$APP_DIR/lib/jogamp-fat-2.6.0.jar:$APP_DIR/Pokemon DS Map Studio.jar" editor.MainFrame "$@"

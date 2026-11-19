@@ -38,4 +38,4 @@ done
 [ -f "$ROOT/start-macos.local" ] && . "$ROOT/start-macos.local"
 export PATH
 mkdir -p "$ROOT/.run" && cd "$ROOT/.run" || exit 1
-exec java --enable-native-access=ALL-UNNAMED -cp "$JOGAMP:$JAR" editor.MainFrame "$@"
+exec java --enable-native-access=ALL-UNNAMED -Xdock:name="Pokemon DS Map Studio" -Dapple.awt.application.name="Pokemon DS Map Studio" -cp "$JOGAMP:$JAR" editor.MainFrame "$@"

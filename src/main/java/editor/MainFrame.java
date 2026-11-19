@@ -234,7 +234,15 @@ public class MainFrame extends JFrame {
         jScrollPaneMapMatrix.getHorizontalScrollBar().setUnitIncrement(16);
         jScrollPaneMapMatrix.getVerticalScrollBar().setUnitIncrement(16);
 
-        setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/icons/programIcon.png")));
+        setIconImages(java.util.Arrays.asList(
+                Toolkit.getDefaultToolkit().getImage(getClass().getResource("/icons/programIcon.png")),
+                Toolkit.getDefaultToolkit().getImage(getClass().getResource("/icons/programIconHD.png"))));
+        // The window icon isn't used for the macOS Dock; set the app's Dock/taskbar icon as well.
+        if (java.awt.Taskbar.isTaskbarSupported()
+                && java.awt.Taskbar.getTaskbar().isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
+            java.awt.Taskbar.getTaskbar().setIconImage(
+                    Toolkit.getDefaultToolkit().getImage(getClass().getResource("/icons/programIconHD.png")));
+        }
         setLocationRelativeTo(null);
 
         //Tileset
